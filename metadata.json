@@ -1,0 +1,6 @@
+{
+  "name": "Yogantak Phone Cases",
+  "description": "A minimalist e-commerce store for premium Yogantak phone cases featuring an advanced filtering system, customized monogram live-preview lab, and a secure checkout process.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
