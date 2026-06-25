@@ -7,6 +7,31 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ token, onClose }: AdminDashboardProps) {
+  const getModelImage = (model: string) => {
+    if (model === 'iPhone 15 Pro Max') {
+      return '/products/Gemini_Generated_Image_iy3i6tiy3i6tiy3i.png';
+    } else if (model === 'iPhone 15 Pro') {
+      return '/products/separate_image_5.png';
+    } else if (model === 'iPhone 15') {
+      return '/products/separate_image_4.png';
+    } else if (model === 'Samsung Galaxy S24 Ultra') {
+      return '/products/separate_image_2.png';
+    } else if (model === 'Samsung Galaxy S24+') {
+      return '/products/case_set2_2.png';
+    } else if (model === 'Google Pixel 8 Pro') {
+      return '/products/separate_image_6.png';
+    } else if (model === 'Nothing Phone (2)') {
+      return '/products/Gemini_Generated_Image_t6puc4t6puc4t6pu.png';
+    } else if (model === 'OnePlus 12') {
+      return '/products/Gemini_Generated_Image_txtit5txtit5txti (1).png';
+    } else if (model === 'Samsung Galaxy Z Fold 5') {
+      return '/products/Gemini_Generated_Image_txtit5txtit5txti.png';
+    } else if (model === 'Motorola Edge') {
+      return '/products/case_set2_4.png';
+    }
+    return '/products/Gemini_Generated_Image_iy3i6tiy3i6tiy3i.png';
+  };
+
   const [stats, setStats] = useState<any>({
     totalRevenue: 0,
     ordersCount: 0,
@@ -232,12 +257,21 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
               ) : (
                 <div className="space-y-3">
                   {lowStockList.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-2 border-b border-neutral-900 last:border-0 text-xs">
-                      <div>
-                        <span className="font-bold text-white block">{item.product_name}</span>
-                        <span className="text-[10px] text-neutral-450 font-mono uppercase">{item.model} • {item.material.replace('Premium ', '')}</span>
-                      </div>
+                    <div key={idx} className="flex justify-between items-center py-2 border-b border-neutral-900 last:border-0 text-xs gap-3">
                       <div className="flex items-center gap-3">
+                        <div className="w-8 h-11 bg-white/5 border border-white/10 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          <img 
+                            src={getModelImage(item.model)} 
+                            alt={item.model} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div>
+                          <span className="font-bold text-white block">{item.product_name}</span>
+                          <span className="text-[10px] text-neutral-450 font-mono uppercase">{item.model} • {item.material.replace('Premium ', '')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
                         <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded text-[9px] font-mono">
                           Stock: {item.stock} left
                         </span>
@@ -269,6 +303,7 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-[#0e0e11] sticky top-0 border-b border-neutral-900 uppercase font-mono text-neutral-450">
                 <tr>
+                  <th className="p-4">Case Preview</th>
                   <th className="p-4">SKU / ID</th>
                   <th className="p-4">Product Name</th>
                   <th className="p-4">Model & Colors</th>
@@ -279,6 +314,15 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
               <tbody className="divide-y divide-neutral-900">
                 {inventoryList.map(item => (
                   <tr key={item.sku} className="hover:bg-white/5 transition-colors">
+                    <td className="p-4">
+                      <div className="w-10 h-14 bg-white/5 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative">
+                        <img 
+                          src={getModelImage(item.model)} 
+                          alt={item.model} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </td>
                     <td className="p-4 font-mono text-[10px] text-neutral-450">{item.sku}</td>
                     <td className="p-4 font-bold">{item.product_name}</td>
                     <td className="p-4">
