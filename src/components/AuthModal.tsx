@@ -94,21 +94,226 @@ export default function AuthModal({
     }
   };
 
-  const handleMockGoogleLogin = () => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const existingScript = document.getElementById('google-gsi-client');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.id = 'google-gsi-client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        initializeGoogleSignIn();
+      };
+      document.body.appendChild(script);
+    } else {
+      setTimeout(() => {
+        initializeGoogleSignIn();
+      }, 200);
+    }
+  }, [isOpen]);
+
+  const initializeGoogleSignIn = () => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+    
+    const win = window as any;
+    if (win.google?.accounts?.id) {
+      win.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleSignInCallback
+      });
+
+      const googleBtnElement = document.getElementById('google-signin-btn-container');
+      if (googleBtnElement && googleClientId !== 'YOUR_GOOGLE_CLIENT_ID') {
+        win.google.accounts.id.renderButton(googleBtnElement, {
+          theme: 'outline',
+          size: 'large',
+          width: 200,
+          text: 'signin_with'
+        });
+      }
+    }
+  };
+
+  const handleGoogleSignInCallback = async (response: any) => {
     setError(null);
-    setSuccess('Simulated Google Authentication completed successfully!');
-    const mockUser = {
-      id: 999,
-      email: 'googleuser@gmail.com',
-      fullName: 'Google User',
-      role: 'customer'
-    };
-    setUser(mockUser);
-    setToken('MOCK_GOOGLE_TOKEN_' + Date.now());
-    setTimeout(() => {
-      onClose();
-      setSuccess(null);
-    }, 1200);
+    setSuccess(null);
+
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Google Sign In failed');
+      }
+
+      setToken(data.token);
+      setUser(data.user);
+      setCart(data.cart || []);
+      setSuccess('Logged in successfully via Google!');
+      setTimeout(() => {
+        onClose();
+        setSuccess(null);
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    setError(null);
+    setSuccess(null);
+
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+
+    if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') {
+      // Sandbox Simulation mode
+      console.log('Running Google login in Sandbox Simulation mode');
+      setSuccess('Simulating Google Authentication... (Sandbox Mode)');
+
+      fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isMock: true,
+          email: 'googleuser@gmail.com',
+          name: 'Google User'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        setToken(data.token);
+        setUser(data.user);
+        setCart(data.cart || []);
+        setSuccess('Logged in successfully via Google (Sandbox)!');
+        setTimeout(() => {
+          onClose();
+          setSuccess(null);
+        }, 1200);
+      })
+      .catch(err => {
+        setError(err.message || 'Google Sign In failed');
+      });
+      return;
+    }
+
+    const win = window as any;
+    if (win.google?.accounts?.id) {
+      win.google.accounts.id.prompt();
+    } else {
+      setError('Google Sign In SDK is still loading. Please try again.');
+    }
+  };
+
+  const handleMicrosoftSignIn = () => {
+    setError(null);
+    setSuccess(null);
+    
+    const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID';
+    
+    if (!microsoftClientId || microsoftClientId === 'YOUR_MICROSOFT_CLIENT_ID') {
+      console.log('Running Microsoft login in Sandbox Simulation mode');
+      setSuccess('Simulating Microsoft Authentication... (Sandbox Mode)');
+      
+      fetch('/api/auth/microsoft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isMock: true,
+          email: 'microsoftuser@outlook.com',
+          name: 'Microsoft User'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        setToken(data.token);
+        setUser(data.user);
+        setCart(data.cart || []);
+        setSuccess('Logged in successfully via Microsoft (Sandbox)!');
+        setTimeout(() => {
+          onClose();
+          setSuccess(null);
+        }, 1200);
+      })
+      .catch(err => {
+        setError(err.message || 'Microsoft Sign In failed');
+      });
+      return;
+    }
+
+    // Real Microsoft OAuth 2.0 Implicit Flow Popup
+    const redirectUri = window.location.origin + '/';
+    const scope = 'user.read';
+    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
+
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      authUrl,
+      'MicrosoftSignIN',
+      `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+    );
+
+    if (!popup) {
+      setError('Blocker active. Please enable popups for Microsoft Sign In.');
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        if (popup.closed) {
+          clearInterval(interval);
+          return;
+        }
+
+        if (popup.location.href.startsWith(redirectUri)) {
+          const hash = popup.location.hash;
+          popup.close();
+          clearInterval(interval);
+
+          const params = new URLSearchParams(hash.substring(1));
+          const accessToken = params.get('access_token');
+          
+          if (!accessToken) {
+            setError('Failed to retrieve Microsoft access token');
+            return;
+          }
+
+          setSuccess('Microsoft authorized. Resolving user profile...');
+          
+          const res = await fetch('/api/auth/microsoft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken })
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Microsoft Sign In failed');
+          }
+
+          setToken(data.token);
+          setUser(data.user);
+          setCart(data.cart || []);
+          setSuccess('Logged in successfully via Microsoft!');
+          setTimeout(() => {
+            onClose();
+            setSuccess(null);
+          }, 1000);
+        }
+      } catch (e) {
+        // Cross-origin exception is expected before redirect, ignore it
+      }
+    }, 500);
   };
 
   const handleSendOTP = () => {
@@ -311,22 +516,62 @@ export default function AuthModal({
                   <div className="flex-grow h-px bg-neutral-800" />
                 </div>
 
+                {/* Google and Microsoft login buttons */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={handleSendOTP}
-                    className="py-2.5 border border-neutral-800 rounded-xl hover:bg-white/5 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={handleGoogleSignIn}
+                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans"
                   >
-                    <span>OTP Sign In</span>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#EA4335"
+                        d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z"
+                      />
+                    </svg>
+                    <span>Google</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={handleMockGoogleLogin}
-                    className="py-2.5 border border-neutral-800 rounded-xl hover:bg-white/5 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={handleMicrosoftSignIn}
+                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans"
                   >
-                    <span>Google OAuth</span>
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 23 23">
+                      <path fill="#f35325" d="M0 0h11v11H0z" />
+                      <path fill="#81bc06" d="M12 0h11v11H12z" />
+                      <path fill="#05a6f0" d="M0 12h11v11H0z" />
+                      <path fill="#ffba08" d="M12 12h11v11H12z" />
+                    </svg>
+                    <span>Microsoft</span>
                   </button>
                 </div>
+
+                {/* OTP fallback link */}
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSendOTP}
+                    className="text-xs text-neutral-450 hover:text-[#adc6ff] font-medium transition-colors cursor-pointer"
+                  >
+                    Or sign in with OTP Code
+                  </button>
+                </div>
+
+                {/* Google mounting container (optional if standard button rendered) */}
+                <div id="google-signin-btn-container" className="hidden" />
               </form>
             ) : (
               /* SIGNUP TAB */

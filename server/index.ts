@@ -7,6 +7,7 @@ import { db } from './db';
 import { hashPassword, verifyPassword, createToken, verifyToken } from './auth';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import https from 'https';
 
 const app = express();
 app.use(express.json());
@@ -133,6 +134,191 @@ app.post('/api/auth/login', (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, (req: AuthRequest, res) => {
   res.json({ user: req.user });
+});
+
+// ==========================================
+// 1b. SOCIAL OAUTH APIS (GOOGLE & MICROSOFT)
+// ==========================================
+
+function httpsGet(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error('Failed to parse response: ' + data));
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+function httpsGetWithAuth(url: string, token: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const options = {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    };
+    https.get(url, options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error('Failed to parse response: ' + data));
+        }
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+function findOrCreateSocialUser(email: string, fullName: string) {
+  const normalizedEmail = email.toLowerCase();
+  
+  // Check if user exists
+  const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
+  let user = selectQuery.get(normalizedEmail) as any;
+  
+  if (!user) {
+    // Create new user profile with a random password and role 'customer'
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const password_hash = hashPassword(randomPassword);
+    
+    const insert = db.prepare(`
+      INSERT INTO users (email, password_hash, full_name, role)
+      VALUES (?, ?, ?, 'customer')
+    `);
+    const info = insert.run(normalizedEmail, password_hash, fullName || 'Social Login User');
+    const userId = Number(info.lastInsertRowid);
+    
+    user = {
+      id: userId,
+      email: normalizedEmail,
+      full_name: fullName || 'Social Login User',
+      role: 'customer'
+    };
+  }
+  
+  return user;
+}
+
+app.post('/api/auth/google', async (req, res) => {
+  const { token, isMock, email, name } = req.body;
+  
+  try {
+    let userEmail = '';
+    let userName = '';
+    
+    const isMockMode = isMock || 
+                       !process.env.GOOGLE_CLIENT_ID || 
+                       process.env.GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID';
+                       
+    if (isMockMode) {
+      userEmail = email || 'mockgoogle@gmail.com';
+      userName = name || 'Mock Google User';
+      console.log(`[AUTH-GOOGLE] Sandbox simulation login for: ${userEmail}`);
+    } else {
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
+      }
+      
+      const tokenInfo = await httpsGet(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+      if (tokenInfo.error_description || tokenInfo.error) {
+        return res.status(401).json({ error: tokenInfo.error_description || 'Invalid Google token' });
+      }
+      
+      userEmail = tokenInfo.email;
+      userName = tokenInfo.name;
+    }
+    
+    if (!userEmail) {
+      return res.status(400).json({ error: 'Failed to retrieve email from Google profile' });
+    }
+    
+    const user = findOrCreateSocialUser(userEmail, userName);
+    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
+    
+    // Fetch cart
+    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
+    const cartData = cartQuery.get(user.id) as any;
+    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
+    
+    res.json({
+      token: sessionToken,
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      cart,
+      isSimulation: isMockMode
+    });
+  } catch (err: any) {
+    console.error('Google Auth Error:', err);
+    res.status(500).json({ error: err.message || 'Google authentication failed' });
+  }
+});
+
+app.post('/api/auth/microsoft', async (req, res) => {
+  const { accessToken, isMock, email, name } = req.body;
+  
+  try {
+    let userEmail = '';
+    let userName = '';
+    
+    const isMockMode = isMock || 
+                       !process.env.MICROSOFT_CLIENT_ID || 
+                       process.env.MICROSOFT_CLIENT_ID === 'YOUR_MICROSOFT_CLIENT_ID';
+                       
+    if (isMockMode) {
+      userEmail = email || 'mockmicrosoft@outlook.com';
+      userName = name || 'Mock Microsoft User';
+      console.log(`[AUTH-MICROSOFT] Sandbox simulation login for: ${userEmail}`);
+    } else {
+      if (!accessToken) {
+        return res.status(400).json({ error: 'Access token is required' });
+      }
+      
+      const profile = await httpsGetWithAuth('https://graph.microsoft.com/v1.0/me', accessToken);
+      if (profile.error) {
+        return res.status(401).json({ error: profile.error.message || 'Invalid Microsoft token' });
+      }
+      
+      userEmail = profile.mail || profile.userPrincipalName;
+      userName = profile.displayName;
+    }
+    
+    if (!userEmail) {
+      return res.status(400).json({ error: 'Failed to retrieve email from Microsoft profile' });
+    }
+    
+    const user = findOrCreateSocialUser(userEmail, userName);
+    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
+    
+    // Fetch cart
+    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
+    const cartData = cartQuery.get(user.id) as any;
+    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
+    
+    res.json({
+      token: sessionToken,
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      cart,
+      isSimulation: isMockMode
+    });
+  } catch (err: any) {
+    console.error('Microsoft Auth Error:', err);
+    res.status(500).json({ error: err.message || 'Microsoft authentication failed' });
+  }
 });
 
 // ==========================================
