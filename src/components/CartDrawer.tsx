@@ -23,7 +23,7 @@ export default function CartDrawer({
   if (!isOpen) return null;
 
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const freeShippingThreshold = 50;
+  const freeShippingThreshold = 4000;
   const awayFromFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   const progressPercent = Math.min(100, (subtotal / freeShippingThreshold) * 100);
 
@@ -58,11 +58,11 @@ export default function CartDrawer({
           <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-100 space-y-2">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-[11px] sm:text-xs font-mono text-slate-500">
               {awayFromFreeShipping > 0 ? (
-                <span>You are <strong className="text-black">${awayFromFreeShipping.toFixed(2)}</strong> away from free express shipping!</span>
+                <span>You are <strong className="text-black">₹{awayFromFreeShipping.toLocaleString('en-IN')}</strong> away from free express shipping!</span>
               ) : (
                 <span className="text-black font-bold">✓ Congratulations! Complimentary express delivery unlocked.</span>
               )}
-              <span className="font-bold">${subtotal.toFixed(2)} / $50</span>
+              <span className="font-bold">₹{subtotal.toLocaleString('en-IN')} / ₹4,000</span>
             </div>
             <div className="w-full bg-gray-100 h-1.5 rounded-none overflow-hidden">
               <div 
@@ -121,7 +121,7 @@ export default function CartDrawer({
                         {item.product.name}
                       </h4>
                       <span className="font-mono font-bold text-sm text-black flex-shrink-0">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                       </span>
                     </div>
 
@@ -185,7 +185,7 @@ export default function CartDrawer({
                 </div>
                 <div className="flex justify-between items-baseline pt-2 border-t border-gray-100">
                   <span className="font-mono text-sm font-bold text-black">Subtotal Balance</span>
-                  <span className="font-mono text-2xl font-bold text-black">${subtotal.toFixed(2)}</span>
+                  <span className="font-mono text-2xl font-bold text-black">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 

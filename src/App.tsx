@@ -11,6 +11,8 @@ import CartDrawer from './components/CartDrawer';
 import CheckoutModal from './components/CheckoutModal';
 import OrdersList from './components/OrdersList';
 import ScrollVideoHeader from './components/ScrollVideoHeader';
+import AuthModal from './components/AuthModal';
+import AdminDashboard from './components/AdminDashboard';
 import { Sparkles, HelpCircle, ShieldAlert, BadgeCheck, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CATEGORIES = [
@@ -48,7 +50,80 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<'catalog' | 'lab' | 'orders'>('catalog');
   
-  // Cart, Orders & Wishlist (with LocalStorage synchronizations)
+  // Products, Auth, and Admin states
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('yogantak_token'));
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(false);
+
+  // Sync token to localStorage and verify user
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('yogantak_token', token);
+      fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Session expired');
+          return res.json();
+        })
+        .then(data => {
+          setUser(data.user);
+        })
+        .catch(err => {
+          console.error(err);
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem('yogantak_token');
+        });
+    } else {
+      localStorage.removeItem('yogantak_token');
+      setUser(null);
+    }
+  }, [token]);
+
+  // Fetch products from database
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch products');
+        return res.json();
+      })
+      .then(data => {
+        setProducts(data);
+      })
+      .catch(err => {
+        console.error('Error fetching database products, falling back to static config:', err);
+      });
+  }, []);
+
+  // Fetch wishlists and cart sync when logged in
+  useEffect(() => {
+    if (user && token) {
+      // Wishlist sync
+      fetch('/api/wishlist', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setSavedProductIds(data);
+        })
+        .catch(err => console.error(err));
+
+      // Orders sync
+      fetch('/api/orders/history', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setOrders(data);
+        })
+        .catch(err => console.error(err));
+    }
+  }, [user, token]);
+
+  // Cart, Orders & Wishlist (with LocalStorage & API synchronizations)
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('corecase_cart');
     return saved ? JSON.parse(saved) : [];
@@ -105,10 +180,20 @@ export default function App() {
   // Ref container for catalog scroll target jumping
   const catalogRef = useRef<HTMLDivElement>(null);
 
-  // Save changes to LocalStorage reactive loops
+  // Save changes to LocalStorage and API reactive loops
   useEffect(() => {
     localStorage.setItem('corecase_cart', JSON.stringify(cart));
-  }, [cart]);
+    if (user && token) {
+      fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ items: cart })
+      }).catch(err => console.error('Failed to sync cart to database:', err));
+    }
+  }, [cart, user, token]);
 
   useEffect(() => {
     localStorage.setItem('corecase_orders', JSON.stringify(orders));
@@ -120,11 +205,25 @@ export default function App() {
 
   // Wishlisting triggers
   const handleToggleSaved = (productId: string) => {
+    const isSaved = savedProductIds.includes(productId);
     setSavedProductIds((prev) => 
-      prev.includes(productId) 
+      isSaved 
         ? prev.filter(p => p !== productId) 
         : [...prev, productId]
     );
+
+    if (user && token) {
+      const url = isSaved ? `/api/wishlist/${productId}` : '/api/wishlist';
+      const method = isSaved ? 'DELETE' : 'POST';
+      fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: isSaved ? undefined : JSON.stringify({ productId })
+      }).catch(err => console.error('Failed to sync wishlist to database:', err));
+    }
   };
 
   // Color selection helper
@@ -138,7 +237,7 @@ export default function App() {
 
   // Filter list of cases using the criteria
   const getFilteredProducts = () => {
-    let filtered = [...PRODUCTS];
+    let filtered = [...products];
 
     // Search query matching
     if (searchQuery.trim().length > 0) {
@@ -398,8 +497,17 @@ export default function App() {
     setActiveDetailsProduct(product);
   };
 
+  if (isAdminView) {
+    return <AdminDashboard token={token} onClose={() => setIsAdminView(false)} />;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#131315] font-sans antialiased text-[#e4e2e4]">
+    <div 
+      className="min-h-screen flex flex-col bg-[#131315] font-sans antialiased text-[#e4e2e4] relative overflow-x-hidden"
+      style={{
+        background: 'radial-gradient(circle at 80% 20%, rgba(233, 195, 73, 0.06) 0%, transparent 55%), radial-gradient(circle at 20% 80%, rgba(173, 198, 255, 0.07) 0%, transparent 55%), #131315'
+      }}
+    >
       
       {/* Scroll-driven Video Showcase Header at the very top of catalog tab */}
       {activeTab === 'catalog' && (
@@ -413,6 +521,8 @@ export default function App() {
         cart={cart}
         setIsCartOpen={setIsCartOpen}
         savedCount={savedProductIds.length}
+        user={user}
+        onAccountClick={() => setIsAuthModalOpen(true)}
       />
 
       {/* Hero Display Header - Only active under core Catalog overview */}
@@ -432,31 +542,31 @@ export default function App() {
         
         {/* TAB 1: CURATED GALLERY GRID */}
         {activeTab === 'catalog' && (
-          <div ref={catalogRef} className="bg-[#f8f9fa] text-[#1f2937] py-12 scroll-mt-28 md:scroll-mt-20">
+          <div ref={catalogRef} className="bg-transparent text-[#e4e2e4] py-12 border-t border-neutral-900/60 scroll-mt-28 md:scroll-mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               
               {/* Title Section */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-gray-200 pb-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-neutral-800/60 pb-6">
                 <div>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
+                  <h1 className="text-3xl sm:text-4xl font-serif font-extrabold tracking-tight text-white headline-lg">
                     Mobile Cases
                   </h1>
-                  <p className="text-gray-500 text-sm mt-1.5">
+                  <p className="text-neutral-400 text-sm mt-1.5">
                     Style meets protection. Find the perfect case for your device.
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500 shrink-0">
-                  <span className="font-semibold text-gray-700">{getFilteredProducts().length} Products</span>
-                  <div className="h-4 w-px bg-gray-200" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400">Sort by:</span>
+                <div className="flex items-center gap-4 text-sm text-neutral-450 shrink-0">
+                  <span className="font-semibold text-white">{getFilteredProducts().length} Products</span>
+                  <div className="h-4 w-px bg-neutral-800" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-neutral-450">Sort by:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => {
                         setSortBy(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="bg-transparent font-semibold text-gray-700 focus:outline-none cursor-pointer text-xs"
+                      className="bg-[#18181b] border border-neutral-800 text-white rounded-xl px-3 py-1.5 font-semibold focus:outline-none focus:border-[#adc6ff] cursor-pointer text-xs"
                     >
                       <option value="featured">Featured</option>
                       <option value="price-asc">Price: Low to High</option>
@@ -468,7 +578,7 @@ export default function App() {
               </div>
 
               {/* Category Pills Row */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none border-b border-gray-150/70">
+              <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none border-b border-neutral-900">
                 {CATEGORIES.map((cat) => {
                   const isActive = activeCategory === cat.id;
                   return (
@@ -477,8 +587,8 @@ export default function App() {
                       onClick={() => handleCategoryClick(cat.id)}
                       className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                         isActive
-                          ? 'bg-[#6366f1] text-white shadow-sm'
-                          : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900'
+                          ? 'bg-[#adc6ff] text-[#002e69] shadow-sm font-bold'
+                          : 'bg-white/5 border border-white/10 text-[#c1c6d7] hover:border-white/20 hover:text-white'
                       }`}
                     >
                       {cat.label}
@@ -520,21 +630,21 @@ export default function App() {
                 {/* Right Side: Grid + Pagination */}
                 <div className="lg:col-span-3 flex flex-col gap-8">
                   {/* Grid header row */}
-                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center justify-between border-b border-neutral-850 pb-3">
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
                       {getFilteredProducts().length} products found
                     </span>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => setGridView('grid')} 
-                        className={`p-1.5 rounded transition-colors ${gridView === 'grid' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-650'}`}
+                        className={`p-1.5 rounded transition-colors cursor-pointer ${gridView === 'grid' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-white'}`}
                         title="Grid View"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                       </button>
                       <button 
                         onClick={() => setGridView('list')} 
-                        className={`p-1.5 rounded transition-colors ${gridView === 'list' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-655'}`}
+                        className={`p-1.5 rounded transition-colors cursor-pointer ${gridView === 'list' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-white'}`}
                         title="List View"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -544,17 +654,17 @@ export default function App() {
 
                   {/* Grid / List of products */}
                   {getFilteredProducts().length === 0 ? (
-                    <div className="bg-white border border-gray-200 rounded-3xl py-24 text-center space-y-4 shadow-sm">
-                      <Sliders className="w-10 h-10 text-gray-400 mx-auto" />
+                    <div className="bg-[#18181b]/50 border border-neutral-850 rounded-3xl py-24 text-center space-y-4 shadow-xl backdrop-blur-md">
+                      <Sliders className="w-10 h-10 text-neutral-500 mx-auto" />
                       <div className="space-y-1.5">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-700">No custom fits match</h3>
-                        <p className="text-xs text-gray-500 font-mono uppercase tracking-widest max-w-sm mx-auto">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-white">No custom fits match</h3>
+                        <p className="text-xs text-neutral-450 font-mono uppercase tracking-widest max-w-sm mx-auto">
                           Ease filter constraints or reset preferences to discover core fits.
                         </p>
                       </div>
                       <button
                         onClick={handleResetFilters}
-                        className="px-6 py-2.5 bg-[#6366f1] text-white hover:bg-[#6366f1]/90 font-mono text-[10px] uppercase tracking-widest font-bold rounded-full transition-all cursor-pointer shadow-md"
+                        className="px-6 py-2.5 bg-[#adc6ff] text-[#002e69] hover:bg-[#adc6ff]/90 font-mono text-[10px] uppercase tracking-widest font-bold rounded-full transition-all cursor-pointer shadow-md"
                       >
                         Reset All Filters
                       </button>
@@ -580,8 +690,8 @@ export default function App() {
 
                   {/* Pagination control */}
                   {getFilteredProducts().length > productsPerPage && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-250/60 pt-6 mt-4">
-                      <span className="text-xs text-gray-500 font-semibold">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-900 pt-6 mt-4">
+                      <span className="text-xs text-neutral-400 font-semibold">
                         Showing {startIndex + 1}-{Math.min(endIndex, getFilteredProducts().length)} of {getFilteredProducts().length} products
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -591,7 +701,7 @@ export default function App() {
                             setCurrentPage(prev => Math.max(1, prev - 1));
                             window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                           }}
-                          className="p-2 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-gray-650 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 border border-neutral-800 bg-white/5 rounded-lg hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -605,10 +715,10 @@ export default function App() {
                                 setCurrentPage(pageNum);
                                 window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                               }}
-                              className={`w-9 h-9 rounded-lg text-xs font-semibold border transition-all ${
+                              className={`w-9 h-9 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                                 isCurrent
-                                  ? 'bg-[#6366f1] border-[#6366f1] text-white shadow-sm shadow-[#6366f1]/20'
-                                  : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 hover:text-gray-900'
+                                  ? 'bg-[#adc6ff] border-[#adc6ff] text-[#002e69] shadow-sm shadow-[#adc6ff]/10 font-bold'
+                                  : 'bg-white/5 border-neutral-800 text-neutral-300 hover:bg-white/10 hover:text-white'
                               }`}
                             >
                               {pageNum}
@@ -621,7 +731,7 @@ export default function App() {
                             setCurrentPage(prev => Math.min(totalPages, prev + 1));
                             window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                           }}
-                          className="p-2 border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-gray-650 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="p-2 border border-neutral-800 bg-white/5 rounded-lg hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -632,18 +742,18 @@ export default function App() {
               </div>
 
               {/* Bottom Features Banner */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 border-t border-gray-200 pt-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 border-t border-neutral-900 pt-12">
                 {[
                   { title: 'Free Shipping', desc: 'On orders over $50', icon: '🚚' },
                   { title: '30-Day Returns', desc: 'Hassle-free returns', icon: '🔄' },
                   { title: 'Secure Payment', desc: '100% secure checkout', icon: '🔒' },
                   { title: '24/7 Support', desc: "We're here to help", icon: '📞' }
                 ].map((feat) => (
-                  <div key={feat.title} className="bg-white border border-gray-150 rounded-2xl p-5 flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={feat.title} className="bg-[#18181b]/50 border border-neutral-850 rounded-2xl p-5 flex items-start gap-4 shadow-md hover:shadow-lg hover:border-neutral-700/80 transition-all duration-300">
                     <span className="text-3xl leading-none">{feat.icon}</span>
                     <div>
-                      <h4 className="font-bold text-gray-900 text-sm leading-tight">{feat.title}</h4>
-                      <p className="text-gray-500 text-xs mt-1 leading-normal">{feat.desc}</p>
+                      <h4 className="font-bold text-white text-sm leading-tight">{feat.title}</h4>
+                      <p className="text-neutral-400 text-xs mt-1 leading-normal">{feat.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -686,6 +796,7 @@ export default function App() {
         onClose={() => setIsCheckoutOpen(false)}
         cart={cart}
         onOrderConfirmed={handleOrderConfirmed}
+        user={user}
       />
 
       {/* 3. Product Details informative layout screen drawer */}
@@ -732,6 +843,17 @@ export default function App() {
 
         </div>
       </footer>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        user={user}
+        setUser={setUser}
+        token={token}
+        setToken={setToken}
+        setCart={setCart}
+        onOpenAdmin={() => setIsAdminView(true)}
+      />
 
     </div>
   );

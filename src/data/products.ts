@@ -26,7 +26,7 @@ export const COLORS: CaseColor[] = [
 export const MATERIAL_DETAILS: Record<CaseMaterial, { description: string; pricePremium: number; tag: string }> = {
   'Premium Pebble Leather': {
     description: 'Sourced from gold-rated European tanneries. Soft pebble grain texture that patinas beautifully over time.',
-    pricePremium: 15,
+    pricePremium: 1200,
     tag: 'Premium'
   },
   'Smooth Liquid Silicone': {
@@ -36,7 +36,7 @@ export const MATERIAL_DETAILS: Record<CaseMaterial, { description: string; price
   },
   'Bio-Degradable Wheat Fiber': {
     description: '100% compostable case formulated with organic wheat straw and bioplastics. Zero carbon footprint.',
-    pricePremium: 5,
+    pricePremium: 400,
     tag: 'Eco-Friendly'
   },
   'Ultra-Tough Polycarbonate': {
@@ -46,7 +46,7 @@ export const MATERIAL_DETAILS: Record<CaseMaterial, { description: string; price
   },
   'Aramid Carbon Fiber': {
     description: 'Woven with genuine Grade-A aramid fiber. Aerospace-grade strength, extreme thinness, matte weave pattern.',
-    pricePremium: 25,
+    pricePremium: 2000,
     tag: 'Aerospace Class'
   }
 };
@@ -56,7 +56,7 @@ export const PRODUCTS: Product[] = [
     id: 'sienna-leather',
     name: 'Atelier pebble grain leather MagSafe case',
     description: 'Exquisite French full-grain pebbled leather wrapped snugly around a hard drop-shell. Over time, it gains a deep, personalized patina unique to your touch.',
-    basePrice: 49,
+    basePrice: 3999,
     rating: 4.9,
     reviewsCount: 164,
     models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra'],
@@ -76,7 +76,7 @@ export const PRODUCTS: Product[] = [
     id: 'bio-wheat',
     name: 'Terra bio-degradable wheat shell',
     description: 'An earth-first shielding case that will leave zero toxic trace. Crafted entirely from renewable wheat fiber and plant starches, maintaining a rugged and organic eggshell feel.',
-    basePrice: 34,
+    basePrice: 2799,
     rating: 4.7,
     reviewsCount: 89,
     models: ['iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Motorola Edge'],
@@ -95,7 +95,7 @@ export const PRODUCTS: Product[] = [
     id: 'crystal-poly',
     name: 'Glacier optical-clear shock proof shield',
     description: 'Let your device design express itself. Engineered with high-index optical polycarbonate and an advanced UV-absorbing compound preventing the classic yellow hue.',
-    basePrice: 39,
+    basePrice: 3199,
     rating: 4.6,
     reviewsCount: 194,
     models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
@@ -112,7 +112,7 @@ export const PRODUCTS: Product[] = [
     id: 'liquid-silicone',
     name: 'Nimbus matte liquid silicone case',
     description: 'The epitome of daily comfort. Form-fitting liquid silicone with a dust-resistant matte skin, wrapping around a robust 3-tier polycarbonate shell.',
-    basePrice: 29,
+    basePrice: 2399,
     rating: 4.8,
     reviewsCount: 312,
     models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
@@ -134,7 +134,7 @@ export const PRODUCTS: Product[] = [
     id: 'stealth-aramid',
     name: 'Aether ultra-thin aramid weave case',
     description: 'The ultimate case for minimalists who despise bulk. Constructed with genuine synthetic fibers 5 times stronger than steel but as light as a feather.',
-    basePrice: 59,
+    basePrice: 4999,
     rating: 4.9,
     reviewsCount: 145,
     models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra', 'Nothing Phone (2)', 'OnePlus 12'],
@@ -151,7 +151,7 @@ export const PRODUCTS: Product[] = [
     id: 'minimalist-wallet',
     name: 'Vanguard card sleeve MagSafe case',
     description: 'A structural, clean 2-in-1 setup. Combines the luxurious matte liquid silicone skin with a built-in stitched card compartment for an absolute card-carrying ease.',
-    basePrice: 45,
+    basePrice: 3699,
     rating: 4.8,
     reviewsCount: 201,
     models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra'],

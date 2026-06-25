@@ -83,7 +83,7 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                 ) : (
                   <span className="px-3.5 py-1.5 bg-[#243D2D] text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 rounded-full">
                     <Truck className="w-3.5 h-3.5 animate-pulse" />
-                    <span>DHL Express Processing</span>
+                    <span>BlueDart / Delhivery Processing</span>
                   </span>
                 )}
               </div>
@@ -114,7 +114,7 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                           </div>
                         </div>
 
-                        <span className="font-mono text-neutral-900 font-bold">${(item.price * item.quantity).toFixed(2)}</span>
+                        <span className="font-mono text-neutral-900 font-bold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                       </div>
                     ))}
                   </div>
@@ -138,7 +138,7 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                   <div className="border-t border-dashed border-[#DCD5C9] pt-3.5 space-y-1 text-xs text-right font-mono text-[#8C8273]">
                     <div className="flex justify-between">
                       <span>Items tally:</span>
-                      <span>${order.subtotal.toFixed(2)}</span>
+                      <span>₹{order.subtotal.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Express courier cost:</span>
@@ -146,11 +146,11 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                     </div>
                     <div className="flex justify-between">
                       <span>Taxes & Duties:</span>
-                      <span>${order.tax.toFixed(2)}</span>
+                      <span>₹{order.tax.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between text-sm text-[#1A1B1C] font-serif font-black border-t border-[#DCD5C9] pt-2">
                       <span>Total Authorized:</span>
-                      <span>${order.total.toFixed(2)}</span>
+                      <span>₹{order.total.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>
@@ -175,11 +175,11 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                   <>
                     <span className="flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-[#C05C46]" />
-                      <span>DISPATCH DEPOT: Oakland Global Sorting Settle</span>
+                      <span>DISPATCH DEPOT: Mumbai Central Sorting Center</span>
                     </span>
                     
                     <div className="flex flex-wrap items-center gap-4">
-                      <span className="text-[#C05C46] font-bold">ESTIMATED COMPLEMENTARY DELIVERY: 2-3 BUSINESS DAYS DHL</span>
+                      <span className="text-[#C05C46] font-bold">ESTIMATED COMPLEMENTARY DELIVERY: 3-5 BUSINESS DAYS via BlueDart / Delhivery</span>
                       
                       {confirmingCancelId === order.id ? (
                         <div className="flex items-center gap-2 font-bold">

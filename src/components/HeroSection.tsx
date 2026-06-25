@@ -188,8 +188,8 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
     <section className="relative bg-[#0F1012] py-6 sm:py-12 md:py-16 overflow-hidden border-b border-neutral-900 font-sans">
       
       {/* Background ambient light flare */}
-      <div className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full bg-indigo-500/10 blur-[130px] pointer-events-none z-0" />
-      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-purple-500/5 blur-[110px] pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full bg-[#e9c349]/5 blur-[130px] pointer-events-none z-0" />
+      <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-[#adc6ff]/5 blur-[110px] pointer-events-none z-0" />
 
       {/* Cinematic Modal expansion for ultra-wide theater view */}
       {isCinematic && (
@@ -284,7 +284,7 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
 
             {/* Middle Logo: YOGANTAK */}
             <div className="flex items-center gap-2 select-none">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-rose-400 via-violet-500 to-indigo-400 flex items-center justify-center shadow-md shadow-violet-500/20">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#e9c349] via-[#4b8eff] to-[#adc6ff] flex items-center justify-center shadow-md shadow-[#adc6ff]/20">
                 <span className="text-[10px] text-white font-bold">✦</span>
               </div>
               <span className="font-mono text-xs sm:text-sm tracking-[0.18em] sm:tracking-[0.3em] font-bold text-white uppercase pl-0.5">

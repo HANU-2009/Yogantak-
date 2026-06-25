@@ -41,10 +41,10 @@ export default function ProductVisualizer({
 
   // Live price estimation
   const getCustomPrice = () => {
-    const basePrice = 29; // baseline for smooth silicone
+    const basePrice = 2399; // baseline for smooth silicone
     const materialPremium = MATERIAL_DETAILS[selectedMaterial]?.pricePremium || 0;
-    const monogramPremium = monogramText.trim().length > 0 ? 10 : 0;
-    const magSafePremium = magsafe ? 5 : 0;
+    const monogramPremium = monogramText.trim().length > 0 ? 800 : 0;
+    const magSafePremium = magsafe ? 400 : 0;
     return basePrice + materialPremium + monogramPremium + magSafePremium;
   };
 
@@ -151,7 +151,7 @@ export default function ProductVisualizer({
               </label>
               {MATERIAL_DETAILS[selectedMaterial]?.pricePremium > 0 && (
                 <span className="text-[11px] font-mono text-black font-bold">
-                  + ${MATERIAL_DETAILS[selectedMaterial].pricePremium} PREMIUM
+                  + ₹{MATERIAL_DETAILS[selectedMaterial].pricePremium.toLocaleString('en-IN')} PREMIUM
                 </span>
               )}
             </div>
@@ -241,7 +241,7 @@ export default function ProductVisualizer({
                 <label className="font-mono text-[11px] uppercase tracking-wider text-gray-400 font-bold">
                   4B. MAGNETIC INTEGRITY
                 </label>
-                <span className="text-[10px] font-mono text-black font-bold">+ $5 INC.</span>
+                <span className="text-[10px] font-mono text-black font-bold">+ ₹400 INC.</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
                 <button
@@ -274,7 +274,7 @@ export default function ProductVisualizer({
               <label className="font-mono text-[11px] uppercase tracking-wider text-gray-400 font-bold">
                 5. PERSONALIZED HOT MONOGRAM
               </label>
-              <span className="text-[10px] font-mono text-black font-bold">+ $10 EMBELLISHMENT</span>
+              <span className="text-[10px] font-mono text-black font-bold">+ ₹800 EMBELLISHMENT</span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -322,7 +322,7 @@ export default function ProductVisualizer({
             <div className="space-y-1 text-center sm:text-left">
               <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Bespoke Design Pricing:</span>
               <div className="flex items-baseline gap-2 justify-center sm:justify-start">
-                <span className="font-mono text-3xl font-bold text-black">${getCustomPrice()}</span>
+                <span className="font-mono text-3xl font-bold text-black">₹{getCustomPrice().toLocaleString('en-IN')}</span>
                 <span className="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-wider">Shipping Included</span>
               </div>
             </div>

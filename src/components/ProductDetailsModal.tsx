@@ -566,7 +566,7 @@ export default function ProductDetailsModal({
                     </span>
                   </div>
                   <strong className="text-sm font-mono text-[#2B1B15]">
-                    ${bundleBasePrice}.00
+                    ₹{bundleBasePrice.toLocaleString('en-IN')}
                   </strong>
                 </div>
 
@@ -597,10 +597,10 @@ export default function ProductDetailsModal({
                     </div>
                     <div className="text-right flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
                       <span className="text-[10px] font-mono text-[#8F7D6D] line-through">
-                        ${bundleBasePrice}.00
+                        ₹{bundleBasePrice.toLocaleString('en-IN')}
                       </span>
                       <strong className="text-sm font-mono text-[#C24B35]">
-                        ${finalPrice}.00
+                        ₹{finalPrice.toLocaleString('en-IN')}
                       </strong>
                     </div>
                   </div>
@@ -638,7 +638,7 @@ export default function ProductDetailsModal({
                   id="addToCartBtn"
                 >
                   <Check className={`w-4 h-4 text-white transition-all ${isAdded ? 'scale-110' : 'scale-0 w-0'}`} />
-                  <span>{isAdded ? 'SUCCESSFULLY ADDED' : `Add To Cart — $${finalPrice}.00`}</span>
+                  <span>{isAdded ? 'SUCCESSFULLY ADDED' : `Add To Cart — ₹${finalPrice.toLocaleString('en-IN')}`}</span>
                 </button>
               </div>
 

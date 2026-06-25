@@ -1,27 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { CartItem, ShippingDetails, PaymentDetails, Order } from '../types';
-import { X, ShieldCheck, Lock, CreditCard, ChevronRight, Check, HelpCircle, ArrowLeft, Loader2, Calendar, FileText, BadgeCheck } from 'lucide-react';
+import { X, ShieldCheck, Lock, CreditCard, ChevronRight, Check, HelpCircle, ArrowLeft, Loader2, Calendar, FileText, BadgeCheck, ShieldAlert } from 'lucide-react';
 
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   cart: CartItem[];
   onOrderConfirmed: (order: Order) => void;
+  user?: any;
 }
 
 export default function CheckoutModal({
   isOpen,
   onClose,
   cart,
-  onOrderConfirmed
+  onOrderConfirmed,
+  user
 }: CheckoutModalProps) {
   
   if (!isOpen) return null;
 
+  const [promoCode, setPromoCode] = useState('');
+  const [showMockRazorpay, setShowMockRazorpay] = useState(false);
+  const [mockRazorpayOrderData, setMockRazorpayOrderData] = useState<any>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shippingCost = subtotal >= 50 ? 0 : 4.99;
-  const tax = subtotal * 0.0825; // 8.25% Sales tax
-  const total = subtotal + shippingCost + tax;
+  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const shippingCost = subtotal >= 4000 ? 0 : 150;
+  const tax = taxableAmount * 0.18; // 18% GST (Indian electronic accessories standard rate)
+  const total = taxableAmount + shippingCost + tax;
 
   // Checkout phase: 'shipping' | 'payment' | 'authorizing' | 'success'
   const [step, setStep] = useState<'shipping' | 'payment' | 'authorizing' | 'success'>('shipping');
@@ -39,7 +50,7 @@ export default function CheckoutModal({
     city: '',
     state: '',
     postalCode: '',
-    country: 'United States',
+    country: 'India',
     phone: ''
   });
 
@@ -53,6 +64,53 @@ export default function CheckoutModal({
 
   // Validation states
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Prefill details for user
+  useEffect(() => {
+    if (isOpen && user) {
+      setShipping(prev => ({
+        ...prev,
+        fullName: user.fullName || '',
+        email: user.email || ''
+      }));
+    }
+  }, [isOpen, user]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => console.log('Razorpay script loaded successfully');
+    script.onerror = () => console.error('Failed to load Razorpay script');
+    document.body.appendChild(script);
+    return () => {
+      try {
+        document.body.removeChild(script);
+      } catch (e) {}
+    };
+  }, [isOpen]);
+
+  const handleApplyCoupon = async () => {
+    setCouponError(null);
+    if (!promoCode) return;
+
+    try {
+      const res = await fetch('/api/coupons/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode, cartTotal: subtotal })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to apply coupon');
+
+      setAppliedCoupon(data);
+      setPromoCode('');
+    } catch (err: any) {
+      setCouponError(err.message);
+      setAppliedCoupon(null);
+    }
+  };
 
   // Real-time Credit card mask
   const formatCardNumber = (value: string) => {
@@ -98,9 +156,19 @@ export default function CheckoutModal({
     }
     if (!shipping.addressLine1.trim()) errors.addressLine1 = 'Delivery coordinates are required';
     if (!shipping.city.trim()) errors.city = 'City coordinate is required';
-    if (!shipping.state.trim()) errors.state = 'State coordinate is required';
-    if (!shipping.postalCode.trim()) errors.postalCode = 'Postal zip classification is required';
-    if (!shipping.phone.trim()) errors.phone = 'Contact coordinates are required';
+    if (!shipping.state.trim()) {
+      errors.state = 'State selection is required';
+    }
+    if (!shipping.postalCode.trim()) {
+      errors.postalCode = 'Postal PIN code is required';
+    } else if (!/^\d{6}$/.test(shipping.postalCode.trim())) {
+      errors.postalCode = 'Please enter a valid 6-digit Indian PIN code';
+    }
+    if (!shipping.phone.trim()) {
+      errors.phone = 'Mobile phone number is required';
+    } else if (!/^[6-9]\d{9}$/.test(shipping.phone.trim().replace(/\D/g, ''))) {
+      errors.phone = 'Please enter a valid 10-digit Indian mobile number';
+    }
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -110,80 +178,273 @@ export default function CheckoutModal({
     }
   };
 
-  // Payment submission validation & Simulated processing sequence
-  const handlePaymentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const errors: Record<string, string> = {};
-
-    const cleanCard = payment.cardNumber.replace(/\s+/g, '');
-    if (cleanCard.length < 16) errors.cardNumber = 'Card must be exactly 16 credentials';
-    if (!payment.cardName.trim()) errors.cardName = 'Name displayed on card is required';
-    
-    const [month, year] = payment.expiryDate.split('/');
-    if (!payment.expiryDate || !month || !year || month.length !== 2 || year.length !== 2) {
-      errors.expiryDate = 'Provide MM/YY format';
-    }
-    if (payment.cvv.length < 3) errors.cvv = 'Provide 3-digit CVV';
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-    } else {
-      setValidationErrors({});
-      startSimulatedHandshake();
-    }
-  };
-
-  const startSimulatedHandshake = () => {
+  const handleMockPaymentSuccess = async () => {
+    setShowMockRazorpay(false);
     setStep('authorizing');
-    setAuthLogs([]);
-    const logs = [
-      'Establishing AES-256 Bit Secure Connection...',
-      'Verifying shipping parameters with postmasters...',
-      'Hashing Card credentials with bank vault standards...',
-      'Conducting Visa Secure authentication audits...',
-      'Syncing payment authorizations with clearing banks...',
-      'Validating order tokens & processing receipt...'
-    ];
+    setAuthLogs(prev => [
+      ...prev,
+      '[SECURE-PORTAL] - Payment successfully completed at Mock Gateway.',
+      '[SECURE-PORTAL] - Verifying cryptographic transaction signatures...'
+    ]);
 
-    logs.forEach((log, index) => {
-      setTimeout(() => {
-        setAuthLogs(prev => [...prev, `[SECURE-PORTAL] - ${log}`]);
-        if (index === logs.length - 1) {
-          finalizeCheckout();
-        }
-      }, (index + 1) * 800);
-    });
+    try {
+      const response = {
+        razorpay_order_id: mockRazorpayOrderData.id,
+        razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
+        razorpay_signature: 'mock_signature'
+      };
+
+      // Verify payment on our backend
+      const verifyRes = await fetch('/api/payments/razorpay/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature
+        })
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.verified) {
+        throw new Error(verifyData.error || 'Cryptographic verification failed');
+      }
+
+      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Signature verified. Hashing order manifest in database...']);
+
+      // Finalize order in our database
+      const orderFinalRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user ? user.id : null,
+          email: shipping.email,
+          items: cart,
+          subtotal,
+          tax,
+          total,
+          shippingName: shipping.fullName,
+          shippingAddress: shipping.addressLine1 + (shipping.addressLine2 ? `, ${shipping.addressLine2}` : ''),
+          shippingCity: shipping.city,
+          shippingState: shipping.state,
+          shippingZip: shipping.postalCode,
+          shippingCountry: shipping.country,
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
+          paymentId: response.razorpay_payment_id
+        })
+      });
+
+      const orderFinalData = await orderFinalRes.json();
+      if (!orderFinalRes.ok) {
+        throw new Error(orderFinalData.error || 'Failed to place order in database');
+      }
+
+      const newOrder: Order = {
+        id: orderFinalData.orderId,
+        date: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        items: [...cart],
+        shipping,
+        subtotal,
+        shippingCost,
+        tax,
+        total,
+        paymentMethod: `Razorpay UPI/Card/Wallet (ID: ${response.razorpay_payment_id.slice(-6)}) (SIMULATED)`,
+        status: 'processing'
+      };
+
+      setCompletedOrder(newOrder);
+      setStep('success');
+      onOrderConfirmed(newOrder);
+
+    } catch (verifyErr: any) {
+      console.error('Payment verification / checkout finalization error:', verifyErr);
+      setCheckoutError(verifyErr.message || 'Payment verification failed');
+      setStep('payment');
+    }
   };
 
-  const finalizeCheckout = () => {
-    // Generate secure order records
-    const orderNumber = `CORE-${Math.floor(100000 + Math.random() * 900000)}`;
-    const newOrder: Order = {
-      id: orderNumber,
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      items: [...cart],
-      shipping,
-      subtotal,
-      shippingCost,
-      tax,
-      total,
-      paymentMethod: `Card ending in •••• ${payment.cardNumber.slice(-4)}`,
-      status: 'processing'
-    };
+  const handleMockPaymentDismiss = () => {
+    setShowMockRazorpay(false);
+    setCheckoutError('Payment cancelled. Please try again.');
+    setStep('payment');
+  };
 
-    setCompletedOrder(newOrder);
-    setStep('success');
-    onOrderConfirmed(newOrder);
+  // Launches Razorpay Web Standard Checkout
+  const handleRazorpayCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCheckoutError(null);
+    setStep('authorizing');
+    setAuthLogs(['[SECURE-PORTAL] - Initiating Razorpay secure session...']);
+
+    try {
+      const amountPaise = Math.round(total * 100);
+
+      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Requesting order reference token from backend...']);
+      
+      // 1. Create Razorpay order on our backend
+      const orderRes = await fetch('/api/payments/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountPaise,
+          currency: 'INR',
+          receipt: `rcpt_yogantak_${Date.now().toString().slice(-6)}`
+        })
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) {
+        throw new Error(orderData.error || 'Failed to initialize gateway order');
+      }
+
+      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Standard Checkout options handshake complete.']);
+
+      if (orderData.isMock) {
+        setMockRazorpayOrderData(orderData);
+        setShowMockRazorpay(true);
+        setStep('payment');
+        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Invalid or missing credentials detected. Loading simulation overlay...']);
+        return;
+      }
+
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T5O4EXfmFPc3Us';
+
+      // 2. Configure checkout options
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'YOGANTAK™ | Premium Cases',
+        description: `Bespoke Order fit for ${shipping.fullName}`,
+        image: 'https://ai.google.dev/static/site-assets/images/share-ais-513315318.png',
+        order_id: orderData.id,
+        handler: async (response: any) => {
+          setAuthLogs(prev => [
+            ...prev,
+            '[SECURE-PORTAL] - Payment successfully completed at Gateway.',
+            '[SECURE-PORTAL] - Verifying cryptographic transaction signatures...'
+          ]);
+
+          try {
+            // Verify payment on our backend
+            const verifyRes = await fetch('/api/payments/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.verified) {
+              throw new Error(verifyData.error || 'Cryptographic verification failed');
+            }
+
+            setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Signature verified. Hashing order manifest in database...']);
+
+            // 3. Finalize order in our database
+            const orderFinalRes = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user ? user.id : null,
+                email: shipping.email,
+                items: cart,
+                subtotal,
+                tax,
+                total,
+                shippingName: shipping.fullName,
+                shippingAddress: shipping.addressLine1 + (shipping.addressLine2 ? `, ${shipping.addressLine2}` : ''),
+                shippingCity: shipping.city,
+                shippingState: shipping.state,
+                shippingZip: shipping.postalCode,
+                shippingCountry: shipping.country,
+                couponCode: appliedCoupon ? appliedCoupon.code : null,
+                paymentId: response.razorpay_payment_id
+              })
+            });
+
+            const orderFinalData = await orderFinalRes.json();
+            if (!orderFinalRes.ok) {
+              throw new Error(orderFinalData.error || 'Failed to place order in database');
+            }
+
+            const newOrder: Order = {
+              id: orderFinalData.orderId,
+              date: new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              items: [...cart],
+              shipping,
+              subtotal,
+              shippingCost,
+              tax,
+              total,
+              paymentMethod: `Razorpay UPI/Card/Wallet (ID: ${response.razorpay_payment_id.slice(-6)})`,
+              status: 'processing'
+            };
+
+            setCompletedOrder(newOrder);
+            setStep('success');
+            onOrderConfirmed(newOrder);
+
+          } catch (verifyErr: any) {
+            console.error('Payment verification / checkout finalization error:', verifyErr);
+            setCheckoutError(verifyErr.message || 'Payment verification failed');
+            setStep('payment');
+          }
+        },
+        prefill: {
+          name: shipping.fullName,
+          email: shipping.email,
+          contact: shipping.phone || ''
+        },
+        notes: {
+          address: `${shipping.addressLine1}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}`
+        },
+        theme: {
+          color: '#adc6ff' // Lumina Luxe primary Azure accent color
+        },
+        modal: {
+          ondismiss: () => {
+            console.log('Razorpay modal dismissed by user');
+            setCheckoutError('Payment cancelled. Please try again.');
+            setStep('payment');
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        console.error('Payment failure event:', resp.error);
+        setCheckoutError(`Payment failed: ${resp.error.description}`);
+        setStep('payment');
+      });
+
+      rzp.open();
+
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      setCheckoutError(err.message || 'Checkout failed');
+      setStep('payment');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" id="checkout-modal">
+    <>
+      <div className="fixed inset-0 z-50 overflow-y-auto" id="checkout-modal">
       
       {/* Dark blurry backdrop */}
       <div 
@@ -318,26 +579,57 @@ export default function CheckoutModal({
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">State</label>
-                    <input
-                      type="text"
+                    <select
                       value={shipping.state}
                       onChange={(e) => setShipping(prev => ({ ...prev, state: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
-                      placeholder="CA"
-                    />
+                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none cursor-pointer"
+                    >
+                      <option value="">Select State</option>
+                      <option>Andhra Pradesh</option>
+                      <option>Arunachal Pradesh</option>
+                      <option>Assam</option>
+                      <option>Bihar</option>
+                      <option>Chhattisgarh</option>
+                      <option>Delhi</option>
+                      <option>Goa</option>
+                      <option>Gujarat</option>
+                      <option>Haryana</option>
+                      <option>Himachal Pradesh</option>
+                      <option>Jammu and Kashmir</option>
+                      <option>Jharkhand</option>
+                      <option>Karnataka</option>
+                      <option>Kerala</option>
+                      <option>Madhya Pradesh</option>
+                      <option>Maharashtra</option>
+                      <option>Manipur</option>
+                      <option>Meghalaya</option>
+                      <option>Mizoram</option>
+                      <option>Nagaland</option>
+                      <option>Odisha</option>
+                      <option>Punjab</option>
+                      <option>Rajasthan</option>
+                      <option>Sikkim</option>
+                      <option>Tamil Nadu</option>
+                      <option>Telangana</option>
+                      <option>Tripura</option>
+                      <option>Uttar Pradesh</option>
+                      <option>Uttarakhand</option>
+                      <option>West Bengal</option>
+                    </select>
                     {validationErrors.state && (
                       <span className="text-[9px] font-mono text-red-500">{validationErrors.state}</span>
                     )}
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Zip Code</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">PIN Code</label>
                     <input
                       type="text"
+                      maxLength={6}
                       value={shipping.postalCode}
-                      onChange={(e) => setShipping(prev => ({ ...prev, postalCode: e.target.value }))}
+                      onChange={(e) => setShipping(prev => ({ ...prev, postalCode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
                       className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
-                      placeholder="94103"
+                      placeholder="400001"
                     />
                     {validationErrors.postalCode && (
                       <span className="text-[9px] font-mono text-red-500">{validationErrors.postalCode}</span>
@@ -353,22 +645,23 @@ export default function CheckoutModal({
                       onChange={(e) => setShipping(prev => ({ ...prev, country: e.target.value }))}
                       className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none cursor-pointer"
                     >
+                      <option>India</option>
                       <option>United States</option>
-                      <option>Canada</option>
                       <option>United Kingdom</option>
-                      <option>Germany</option>
-                      <option>France</option>
+                      <option>United Arab Emirates</option>
+                      <option>Singapore</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Phone Coordinates</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Mobile Number</label>
                     <input
                       type="text"
+                      maxLength={10}
                       value={shipping.phone}
-                      onChange={(e) => setShipping(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => setShipping(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
                       className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
-                      placeholder="(415) 555-2673"
+                      placeholder="9876543210"
                     />
                     {validationErrors.phone && (
                       <span className="text-[9px] font-mono text-red-500">{validationErrors.phone}</span>
@@ -384,139 +677,67 @@ export default function CheckoutModal({
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </form>
-            )}
-
-            {/* STEP 2: PAYMENT COMPARTMENT */}
+            )}            {/* STEP 2: PAYMENT COMPARTMENT */}
             {step === 'payment' && (
-              <form onSubmit={handlePaymentSubmit} className="space-y-4">
+              <form onSubmit={handleRazorpayCheckout} className="space-y-6">
                 <button
                   type="button"
                   onClick={() => setStep('shipping')}
-                  className="inline-flex items-center gap-1 text-[10px] font-mono text-gray-400 hover:text-black mb-2 focus:outline-none"
+                  className="inline-flex items-center gap-1 text-[10px] font-mono text-[#c1c6d7] hover:text-white mb-2 focus:outline-none cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Return to Shipping Profile</span>
                 </button>
 
-                {/* Digital Card Graphic Mockup */}
-                <div className="w-full bg-black text-white p-5 rounded-none border border-neutral-850 flex flex-col justify-between aspect-[1.7/1] relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+                {checkoutError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-500 text-xs flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <span>{checkoutError}</span>
+                  </div>
+                )}
+
+                {/* Digital Graphic Mockup showing Razorpay Gateway */}
+                <div className="w-full bg-[#1c1c1e] text-white p-6 rounded-3xl border border-white/10 flex flex-col justify-between aspect-[1.7/1] relative overflow-hidden shadow-xl">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#adc6ff]/5 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
                   
                   <div className="flex justify-between items-start">
-                    <span className="font-mono text-xs tracking-widest text-[#E4DCD0]/60">CORECARD SECURE</span>
-                    <Lock className="w-4 h-4 text-neutral-400" />
+                    <span className="font-mono text-[9px] tracking-widest text-[#c1c6d7] uppercase">SECURE CHECKOUT GATEWAY</span>
+                    <Lock className="w-4 h-4 text-[#adc6ff]" />
                   </div>
 
-                  <div className="space-y-2.5">
-                    <div className="font-mono text-base tracking-[0.25em] text-center min-h-[24px]">
-                      {payment.cardNumber || '•••• •••• •••• ••••'}
-                    </div>
-                    <div className="flex justify-between font-mono text-[9px] text-[#E4DCD0]/60 uppercase tracking-widest">
-                      <div>
-                        <span>Holder: </span>
-                        <span className="text-white block font-medium mt-0.5">{payment.cardName || 'JANE DOE'}</span>
-                      </div>
-                      <div>
-                        <span>Expiry: </span>
-                        <span className="text-white block font-medium mt-0.5">{payment.expiryDate || 'MM/YY'}</span>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[10px] text-neutral-400 block tracking-wider uppercase font-mono">Amount Payable</span>
+                      <div className="text-2xl font-extrabold text-[#adc6ff] font-mono mt-1">
+                        ₹{total.toLocaleString('en-IN')}
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Secure Badge */}
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 p-2 text-[10px] font-mono text-black">
-                  <CreditCard className="w-4 h-4 text-black" />
-                  <span>We accept major credit card lines, including Apple Pay and Google transactions securely.</span>
-                </div>
-
-                {/* Main Card Inputs */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Card Number</label>
-                      <input
-                        type="text"
-                        value={payment.cardNumber}
-                        onChange={handleCardInputChange}
-                        className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none"
-                        placeholder="4111 2222 3333 4444"
-                      />
-                      {validationErrors.cardNumber && (
-                        <span className="text-[9px] font-mono text-red-500">{validationErrors.cardNumber}</span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Name On Card</label>
-                      <input
-                        type="text"
-                        value={payment.cardName}
-                        onChange={(e) => setPayment(prev => ({ ...prev, cardName: e.target.value }))}
-                        className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
-                        placeholder="Jane Doe"
-                      />
-                      {validationErrors.cardName && (
-                        <span className="text-[9px] font-mono text-red-500">{validationErrors.cardName}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-gray-400" />
-                        <span>Expiration Date</span>
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={5}
-                        value={payment.expiryDate}
-                        onChange={(e) => setPayment(prev => ({ ...prev, expiryDate: formatExpiryDate(e.target.value) }))}
-                        className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none"
-                        placeholder="MM/YY"
-                      />
-                      {validationErrors.expiryDate && (
-                        <span className="text-[9px] font-mono text-red-500">{validationErrors.expiryDate}</span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Security Code (CVV)</label>
-                      <input
-                        type="password"
-                        maxLength={4}
-                        value={payment.cvv}
-                        onChange={(e) => setPayment(prev => ({ ...prev, cvv: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }))}
-                        className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none"
-                        placeholder="123"
-                      />
-                      {validationErrors.cvv && (
-                        <span className="text-[9px] font-mono text-red-500">{validationErrors.cvv}</span>
-                      )}
+                    
+                    <div className="flex justify-between font-mono text-[9px] text-[#c1c6d7] uppercase tracking-widest">
+                      <div>
+                        <span>Client Reference</span>
+                        <span className="text-white block font-medium mt-0.5">{shipping.fullName || 'GUEST CUSTOMER'}</span>
+                      </div>
+                      <div>
+                        <span>Currency</span>
+                        <span className="text-white block font-medium mt-0.5">INR (₹)</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={payment.saveInfo}
-                    onChange={(e) => setPayment(prev => ({ ...prev, saveInfo: e.target.checked }))}
-                    className="w-4 h-4 accent-black border-gray-100 rounded-none focus:ring-0"
-                    id="savePayment"
-                  />
-                  <label htmlFor="savePayment" className="text-[11px] font-mono text-gray-400 cursor-pointer selection:bg-none">
-                    Remember financial profiles for rapid subsequent shopping
-                  </label>
+                {/* Razorpay Gateway Description Badge */}
+                <div className="flex items-center gap-3 bg-neutral-900 border border-white/5 p-4 text-[10px] font-mono text-[#c1c6d7] rounded-2xl">
+                  <CreditCard className="w-5 h-5 text-[#adc6ff] shrink-0" />
+                  <span>Razorpay handles all payments securely. We accept UPI (GooglePay, PhonePe, Paytm), RuPay, Visa, Mastercard, Netbanking, and Wallets.</span>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-black hover:opacity-85 text-white font-mono text-xs uppercase tracking-widest mt-6 cursor-pointer flex items-center justify-center gap-2 rounded-none transition-all"
+                  className="w-full py-4 bg-[#adc6ff] hover:bg-[#adc6ff]/90 text-[#002e69] font-bold text-xs uppercase tracking-widest mt-6 cursor-pointer flex items-center justify-center gap-2 rounded-full transition-all shadow-lg active:scale-98"
                 >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Authorize Secure Charge (${total.toFixed(2)})</span>
+                  <Lock className="w-3.5 h-3.5 text-[#002e69]" />
+                  <span>Pay with Razorpay (₹{total.toLocaleString('en-IN')})</span>
                 </button>
               </form>
             )}
@@ -605,7 +826,7 @@ export default function CheckoutModal({
                             {item.selectedModel} • {item.selectedMaterial.replace('Premium ', '')}
                           </small>
                         </span>
-                        <strong className="text-black font-mono font-bold">${(item.price * item.quantity).toFixed(2)}</strong>
+                        <strong className="text-black font-mono font-bold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</strong>
                       </div>
                     ))}
                   </div>
@@ -613,19 +834,19 @@ export default function CheckoutModal({
                   <div className="pt-3 border-t border-dashed border-gray-150 space-y-1 font-mono text-xs text-right">
                     <div className="flex justify-between">
                       <span className="text-gray-400">Subtotal:</span>
-                      <span>${completedOrder.subtotal.toFixed(2)}</span>
+                      <span>₹{completedOrder.subtotal.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Shipping Cost:</span>
-                      <span>{completedOrder.shippingCost === 0 ? 'FREE' : `$${completedOrder.shippingCost.toFixed(2)}`}</span>
+                      <span>{completedOrder.shippingCost === 0 ? 'FREE' : `₹${completedOrder.shippingCost.toLocaleString('en-IN')}`}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Import & Sales Tax (8.25%):</span>
-                      <span>${completedOrder.tax.toFixed(2)}</span>
+                      <span className="text-gray-400">GST Tax (18%):</span>
+                      <span>₹{completedOrder.tax.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-gray-150">
                       <strong className="font-mono font-bold text-black uppercase">Total Charge Authorized:</strong>
-                      <strong className="font-mono font-bold text-black text-lg">${completedOrder.total.toFixed(2)}</strong>
+                      <strong className="font-mono font-bold text-black text-lg">₹{completedOrder.total.toLocaleString('en-IN')}</strong>
                     </div>
                   </div>
                 </div>
@@ -673,28 +894,57 @@ export default function CheckoutModal({
                         <strong className="text-black block truncate leading-tight font-sans text-xs uppercase tracking-wide">{item.product.name}</strong>
                         <span className="text-[10px] font-mono text-gray-400 block truncate">{item.selectedModel}</span>
                       </div>
-                      <span className="font-mono text-black font-bold flex-shrink-0">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-mono text-black font-bold flex-shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
+                </div>
+
+                {/* Coupon Code Input */}
+                <div className="border-t border-gray-150 pt-4 space-y-2">
+                  <span className="text-[10px] font-mono uppercase text-gray-400 tracking-wider block">Apply Promo Coupon</span>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. WELCOME10"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      className="flex-1 bg-white border border-gray-200 px-3 py-1.5 text-xs font-mono uppercase text-black focus:outline-none focus:border-black rounded-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      className="px-4 py-1.5 bg-black hover:opacity-85 text-white text-xs font-mono uppercase tracking-wider cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {couponError && (
+                    <span className="text-[9px] font-mono text-red-500 block">{couponError}</span>
+                  )}
+                  {appliedCoupon && (
+                    <span className="text-[9px] font-mono text-green-700 block font-semibold">
+                      ✓ Coupon Applied: {appliedCoupon.code} (-₹{appliedCoupon.discount.toLocaleString('en-IN')})
+                    </span>
+                  )}
                 </div>
 
                 {/* Subsidaries listing */}
                 <div className="border-t border-gray-100 pt-4 space-y-1.5 font-mono text-xs">
                   <div className="flex justify-between text-slate-500">
                     <span>Items Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-slate-500">
                     <span>Express Shipping:</span>
-                    <span>{shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}</span>
+                    <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost.toLocaleString('en-IN')}`}</span>
                   </div>
                   <div className="flex justify-between text-slate-500">
-                    <span>Sales Surcharge:</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>GST Surcharge (18%):</span>
+                    <span>₹{tax.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-sm pt-2.5 border-t border-dashed border-gray-150">
                     <strong className="font-mono font-bold text-black uppercase">Full Balance Total:</strong>
-                    <strong className="font-mono text-lg font-bold text-black">${total.toFixed(2)}</strong>
+                    <strong className="font-mono text-lg font-bold text-black">₹{total.toLocaleString('en-IN')}</strong>
                   </div>
                 </div>
               </div>
@@ -739,5 +989,88 @@ export default function CheckoutModal({
 
       </div>
     </div>
+
+    {/* Mock Razorpay Popup Simulation Frame */}
+    {showMockRazorpay && mockRazorpayOrderData && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+        <div className="relative w-full max-w-md bg-[#1B2430] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden font-sans text-white">
+          
+          {/* Header bar mirroring Razorpay design */}
+          <div className="bg-[#121921] p-5 flex justify-between items-center border-b border-gray-800">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-[#2E86C1] rounded-full flex items-center justify-center font-bold text-xs">R</div>
+              <div>
+                <h4 className="text-sm font-bold tracking-wide">Razorpay Checkout</h4>
+                <span className="text-[10px] text-gray-400 font-mono">SANDBOX SIMULATION MODE</span>
+              </div>
+            </div>
+            <button 
+              onClick={handleMockPaymentDismiss}
+              className="text-gray-400 hover:text-white font-mono text-xs cursor-pointer border border-gray-800 px-2.5 py-1 transition-colors"
+            >
+              CANCEL
+            </button>
+          </div>
+
+          {/* Sandbox alert */}
+          <div className="bg-amber-500/10 border-b border-amber-500/25 p-4 text-xs text-amber-400 flex items-start gap-2.5">
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <div>
+              <strong>Sandbox / Fallback Mode Active</strong>
+              <p className="text-[11px] text-gray-400 leading-normal mt-0.5">
+                Your server's API keys in <code className="text-white bg-black/20 px-1 font-mono">.env</code> are not configured or are returning unauthorized. We have enabled an in-app payment simulation so you can safely test the checkout flow!
+              </p>
+            </div>
+          </div>
+
+          {/* Details panel */}
+          <div className="p-6 space-y-4">
+            
+            <div className="flex justify-between items-baseline border-b border-gray-800 pb-3">
+              <span className="text-xs text-gray-400">Merchant</span>
+              <span className="text-xs font-bold text-[#adc6ff]">YOGANTAK™ | Premium Cases</span>
+            </div>
+
+            <div className="flex justify-between items-baseline border-b border-gray-800 pb-3">
+              <span className="text-xs text-gray-400">Total Charge</span>
+              <span className="text-base font-extrabold font-mono text-emerald-400">₹{(mockRazorpayOrderData.amount / 100).toLocaleString('en-IN')}</span>
+            </div>
+
+            <div className="flex justify-between items-baseline border-b border-gray-800 pb-3">
+              <span className="text-xs text-gray-400">Reference ID</span>
+              <span className="text-xs font-mono text-gray-300">{mockRazorpayOrderData.id}</span>
+            </div>
+
+            <div className="pt-4 space-y-3">
+              <button
+                onClick={handleMockPaymentSuccess}
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Simulate Payment Success (UPI / Card)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowMockRazorpay(false);
+                  setCheckoutError('Simulated Payment failed: Insufficient bank balance');
+                  setStep('payment');
+                }}
+                className="w-full py-3.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4" />
+                <span>Simulate Payment Failure</span>
+              </button>
+            </div>
+
+            <p className="text-[10px] text-gray-500 text-center leading-normal pt-2 font-mono">
+              To connect real payments, update the <code className="text-gray-400">RAZORPAY_KEY_ID</code> and <code className="text-gray-400">RAZORPAY_KEY_SECRET</code> inside the root <code className="text-gray-400">.env</code> configuration file.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    )}
+    </>
   );
 }
