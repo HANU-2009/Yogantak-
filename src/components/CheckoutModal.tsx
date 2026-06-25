@@ -288,7 +288,7 @@ export default function CheckoutModal({
       setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Requesting order reference token from backend...']);
       
       // 1. Create Razorpay order on our backend
-      const orderRes = await fetch('/api/payments/razorpay/order', {
+      const orderRes = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -299,8 +299,32 @@ export default function CheckoutModal({
       });
 
       const orderData = await orderRes.json();
+
+      // If unauthorized (401), we can display the simulation overlay as fallback
+      if (orderRes.status === 401) {
+        setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Razorpay credentials unauthorized (401).']);
+        const mockOrder = {
+          id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
+          order_id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
+          amount: amountPaise,
+          currency: 'INR',
+          entity: 'order',
+          isMock: true
+        };
+        setMockRazorpayOrderData(mockOrder);
+        setShowMockRazorpay(true);
+        setStep('payment');
+        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Razorpay auth failure. Loading simulation overlay...']);
+        return;
+      }
+
       if (!orderRes.ok) {
         throw new Error(orderData.error || 'Failed to initialize gateway order');
+      }
+
+      // Map order_id to id for compatibility with existing UI
+      if (orderData.order_id && !orderData.id) {
+        orderData.id = orderData.order_id;
       }
 
       setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Standard Checkout options handshake complete.']);
@@ -309,11 +333,11 @@ export default function CheckoutModal({
         setMockRazorpayOrderData(orderData);
         setShowMockRazorpay(true);
         setStep('payment');
-        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Invalid or missing credentials detected. Loading simulation overlay...']);
+        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Loading simulation overlay...']);
         return;
       }
 
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T5O4EXfmFPc3Us';
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T5psKS97goYKw1';
 
       // 2. Configure checkout options
       const options = {
@@ -333,7 +357,7 @@ export default function CheckoutModal({
 
           try {
             // Verify payment on our backend
-            const verifyRes = await fetch('/api/payments/razorpay/verify', {
+            const verifyRes = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

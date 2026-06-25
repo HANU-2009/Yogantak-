@@ -687,6 +687,95 @@ app.post('/api/payments/razorpay/verify', (req, res) => {
 });
 
 // ==========================================
+// 6b. STANDARD RAZORPAY API INTEGRATION
+// ==========================================
+
+app.post('/api/create-order', async (req: Request, res: Response) => {
+  try {
+    const { amount, currency, receipt } = req.body;
+    if (amount === undefined || amount === null) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+    const amountPaise = Number(amount);
+    if (isNaN(amountPaise) || amountPaise < 100) {
+      return res.status(400).json({ error: 'Amount must be at least 100 paise' });
+    }
+
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!key_id || !key_secret || key_id === 'YOUR_KEY_ID' || key_secret === 'YOUR_KEY_SECRET') {
+      return res.status(401).json({ error: 'Razorpay API credentials not configured' });
+    }
+
+    const razorpay = new Razorpay({
+      key_id,
+      key_secret
+    });
+
+    try {
+      const order = await razorpay.orders.create({
+        amount: amountPaise,
+        currency: currency || 'INR',
+        receipt: receipt || `rcpt_${Date.now()}`
+      });
+
+      return res.json({
+        order_id: order.id,
+        amount: order.amount,
+        currency: order.currency
+      });
+    } catch (razorpayError: any) {
+      console.error('Razorpay SDK Order creation failed:', razorpayError);
+      const statusCode = razorpayError.statusCode || 500;
+      if (statusCode === 401 || razorpayError.message?.toLowerCase().includes('auth') || razorpayError.message?.toLowerCase().includes('key')) {
+        return res.status(401).json({ error: 'Razorpay authentication failed: Invalid credentials.' });
+      }
+      return res.status(500).json({ error: razorpayError.message || 'Razorpay order creation failed' });
+    }
+  } catch (error: any) {
+    console.error('Create order exception:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+app.post('/api/verify-payment', (req: Request, res: Response) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing required payment verification fields' });
+    }
+
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) {
+      return res.status(500).json({ error: 'Razorpay key secret not configured on server' });
+    }
+
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      return res.json({
+        verified: true,
+        message: 'Payment verified successfully'
+      });
+    } else {
+      return res.status(400).json({
+        verified: false,
+        error: 'Invalid payment signature. Payment verification failed.'
+      });
+    }
+  } catch (error: any) {
+    console.error('Verify payment exception:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// ==========================================
 // 7. ADMIN DASHBOARD APIS
 // ==========================================
 
