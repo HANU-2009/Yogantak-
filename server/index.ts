@@ -321,6 +321,47 @@ app.post('/api/auth/microsoft', async (req, res) => {
   }
 });
 
+app.post('/api/auth/otp/send', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  console.log(`[AUTH-OTP] Sending OTP to: ${email}`);
+  res.json({ success: true, message: 'SMS/Email OTP code sent: 4821' });
+});
+
+app.post('/api/auth/otp/verify', (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and verification code are required' });
+  }
+
+  if (code !== '4821') {
+    return res.status(400).json({ error: 'Invalid OTP code. Please enter 4821.' });
+  }
+
+  try {
+    const defaultName = email.split('@')[0];
+    const user = findOrCreateSocialUser(email, defaultName || 'OTP User');
+    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
+
+    // Fetch cart
+    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
+    const cartData = cartQuery.get(user.id) as any;
+    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
+
+    console.log(`[AUTH-OTP] Verified user ${email} successfully`);
+    res.json({
+      token: sessionToken,
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      cart
+    });
+  } catch (err: any) {
+    console.error('OTP Verification Error:', err);
+    res.status(500).json({ error: err.message || 'OTP verification failed' });
+  }
+});
+
 // ==========================================
 // 2. PRODUCT CATALOG APIS
 // ==========================================

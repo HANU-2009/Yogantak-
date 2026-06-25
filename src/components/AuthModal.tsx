@@ -33,6 +33,10 @@ export default function AuthModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [sandboxProvider, setSandboxProvider] = useState<'google' | 'microsoft' | null>(null);
+  const [sandboxEmail, setSandboxEmail] = useState('');
+  const [sandboxName, setSandboxName] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -171,33 +175,9 @@ export default function AuthModal({
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
 
     if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') {
-      // Sandbox Simulation mode
-      console.log('Running Google login in Sandbox Simulation mode');
-      setSuccess('Simulating Google Authentication... (Sandbox Mode)');
-
-      fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isMock: true,
-          email: 'googleuser@gmail.com',
-          name: 'Google User'
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        setToken(data.token);
-        setUser(data.user);
-        setCart(data.cart || []);
-        setSuccess('Logged in successfully via Google (Sandbox)!');
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1200);
-      })
-      .catch(err => {
-        setError(err.message || 'Google Sign In failed');
-      });
+      setSandboxProvider('google');
+      setSandboxEmail('');
+      setSandboxName('');
       return;
     }
 
@@ -216,32 +196,9 @@ export default function AuthModal({
     const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID';
     
     if (!microsoftClientId || microsoftClientId === 'YOUR_MICROSOFT_CLIENT_ID') {
-      console.log('Running Microsoft login in Sandbox Simulation mode');
-      setSuccess('Simulating Microsoft Authentication... (Sandbox Mode)');
-      
-      fetch('/api/auth/microsoft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isMock: true,
-          email: 'microsoftuser@outlook.com',
-          name: 'Microsoft User'
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        setToken(data.token);
-        setUser(data.user);
-        setCart(data.cart || []);
-        setSuccess('Logged in successfully via Microsoft (Sandbox)!');
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1200);
-      })
-      .catch(err => {
-        setError(err.message || 'Microsoft Sign In failed');
-      });
+      setSandboxProvider('microsoft');
+      setSandboxEmail('');
+      setSandboxName('');
       return;
     }
 
@@ -314,27 +271,93 @@ export default function AuthModal({
     }, 500);
   };
 
-  const handleSendOTP = () => {
+  const handleSandboxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sandboxEmail) {
+      setError('Please provide an email address.');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+
+    const providerUrl = sandboxProvider === 'google' ? '/api/auth/google' : '/api/auth/microsoft';
+    const displayProvider = sandboxProvider === 'google' ? 'Google' : 'Microsoft';
+
+    try {
+      setSuccess(`Simulating ${displayProvider} Auth redirect & verification...`);
+      const res = await fetch(providerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isMock: true,
+          email: sandboxEmail,
+          name: sandboxName || `${displayProvider} User`
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `${displayProvider} auth failed`);
+      }
+
+      setToken(data.token);
+      setUser(data.user);
+      setCart(data.cart || []);
+      setSuccess(`Logged in successfully via ${displayProvider} (Sandbox)!`);
+      setTimeout(() => {
+        onClose();
+        setSuccess(null);
+        setSandboxProvider(null);
+        setSandboxEmail('');
+        setSandboxName('');
+      }, 1200);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleSendOTP = async () => {
     if (!email) {
       setError('Please provide an email address first.');
       return;
     }
     setError(null);
-    setOtpSent(true);
-    setSuccess('SMS/Email OTP code sent: 4821');
+    setSuccess(null);
+
+    try {
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send OTP');
+      }
+      setOtpSent(true);
+      setSuccess('SMS/Email OTP code sent: 4821');
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     setError(null);
-    if (otpCode === '4821') {
-      const mockUser = {
-        id: 888,
-        email: email,
-        fullName: 'OTP Verified User',
-        role: 'customer'
-      };
-      setUser(mockUser);
-      setToken('MOCK_OTP_TOKEN_' + Date.now());
+    setSuccess(null);
+
+    try {
+      const res = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otpCode })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid OTP code. Please enter 4821.');
+      }
+      setToken(data.token);
+      setUser(data.user);
+      setCart(data.cart || []);
       setSuccess('OTP verified successfully!');
       setTimeout(() => {
         onClose();
@@ -342,8 +365,8 @@ export default function AuthModal({
         setOtpSent(false);
         setOtpCode('');
       }, 1200);
-    } else {
-      setError('Invalid OTP code. Please enter 4821.');
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -377,9 +400,9 @@ export default function AuthModal({
           <div className="space-y-6 py-4">
             <div className="text-center space-y-1.5">
               <div className="w-16 h-16 bg-[#adc6ff]/10 text-[#adc6ff] border border-[#adc6ff]/20 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
-                {user.fullName.charAt(0).toUpperCase()}
+                {user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
               </div>
-              <h3 className="text-lg font-bold">{user.fullName}</h3>
+              <h3 className="text-lg font-bold">{user.fullName || 'User Profile'}</h3>
               <p className="text-xs text-neutral-450 font-mono">{user.email}</p>
               {user.role === 'admin' && (
                 <span className="inline-block mt-2 px-2.5 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] uppercase font-mono tracking-widest font-bold rounded-full">
@@ -409,6 +432,125 @@ export default function AuthModal({
                 <span>Log Out</span>
               </button>
             </div>
+          </div>
+        ) : sandboxProvider ? (
+          /* SANDBOX CHOOSE ACCOUNT MODE */
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 pb-3 border-b border-neutral-800">
+              {sandboxProvider === 'google' ? (
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
+                    <path fill="#34A853" d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z" />
+                    <path fill="#4285F4" d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z" />
+                    <path fill="#FBBC05" d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z" />
+                  </svg>
+                  <span className="font-bold text-sm text-[#adc6ff] tracking-wide uppercase font-sans">Google Sandbox OAuth</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <svg className="w-4.5 h-4.5" viewBox="0 0 23 23">
+                    <path fill="#f35325" d="M0 0h11v11H0z" />
+                    <path fill="#81bc06" d="M12 0h11v11H12z" />
+                    <path fill="#05a6f0" d="M0 12h11v11H0z" />
+                    <path fill="#ffba08" d="M12 12h11v11H12z" />
+                  </svg>
+                  <span className="font-bold text-sm text-[#adc6ff] tracking-wide uppercase font-sans">Microsoft Sandbox OAuth</span>
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{success}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSandboxSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-neutral-450 font-bold uppercase tracking-wider">Quick Profile Select</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSandboxEmail('admin@yogantak.com');
+                      setSandboxName('Administrator Profile');
+                    }}
+                    className="py-2 px-3 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl text-xs font-semibold text-left transition-all"
+                  >
+                    <div className="font-bold text-white text-[11px]">Admin User</div>
+                    <div className="text-neutral-400 text-[10px] font-mono truncate">admin@yogantak.com</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSandboxEmail('demo.customer@gmail.com');
+                      setSandboxName('Demo Customer');
+                    }}
+                    className="py-2 px-3 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl text-xs font-semibold text-left transition-all"
+                  >
+                    <div className="font-bold text-white text-[11px]">Demo Customer</div>
+                    <div className="text-neutral-400 text-[10px] font-mono truncate">demo.customer@gmail.com</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center my-1.5">
+                <div className="flex-grow h-px bg-neutral-800" />
+                <span className="px-3 text-[10px] text-neutral-500 uppercase tracking-widest font-mono">Or enter custom details</span>
+                <div className="flex-grow h-px bg-neutral-800" />
+              </div>
+
+              <div className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="email"
+                    placeholder="Enter your customer email"
+                    value={sandboxEmail}
+                    onChange={(e) => setSandboxEmail(e.target.value)}
+                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    required
+                  />
+                  <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={sandboxName}
+                    onChange={(e) => setSandboxName(e.target.value)}
+                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    required
+                  />
+                  <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSandboxProvider(null)}
+                  className="flex-1 py-2.5 border border-neutral-800 text-neutral-450 hover:text-white transition-all text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-[#adc6ff] text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#adc6ff]/90 transition-all cursor-pointer"
+                >
+                  Sign In
+                </button>
+              </div>
+            </form>
           </div>
         ) : (
           /* LOGIN / SIGNUP MODE */
