@@ -820,8 +820,10 @@ export default function CheckoutModal({
 
                 {/* Full formal summary receipt */}
                 <div className="bg-gray-50 p-6 border border-gray-150 space-y-4">
-                  <div className="flex justify-between items-center text-xs font-mono pb-2.5 border-b border-gray-150">
+                  <div className="flex justify-between items-start text-xs font-mono pb-2.5 border-b border-gray-150">
                     <div>
+                      <h5 className="font-bold text-black uppercase tracking-wider mb-1 border-b border-black inline-block">Tax Invoice</h5>
+                      <p className="text-[9px] text-gray-500 mb-2">Issued by: Yogantak (GSTIN: 29XXXXX0000X1Z5)</p>
                       <span className="text-gray-400">Order Reference:</span>
                       <strong className="text-black block mt-0.5">{completedOrder.id}</strong>
                     </div>

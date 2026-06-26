@@ -134,8 +134,9 @@ export default function ProductCard({
               <span className="text-lg font-extrabold text-[#adc6ff] font-mono">
                 ₹{prices.current.toLocaleString('en-IN')}
               </span>
+              <span className="text-[9px] text-neutral-500 font-mono">(Incl. GST)</span>
               {prices.retail && (
-                <span className="text-xs text-neutral-500 line-through font-mono">
+                <span className="text-xs text-neutral-500 line-through font-mono ml-1">
                   ₹{prices.retail.toLocaleString('en-IN')}
                 </span>
               )}
@@ -293,8 +294,9 @@ export default function ProductCard({
             <span className="text-[15px] font-extrabold text-[#adc6ff] font-mono leading-none">
               ₹{prices.current.toLocaleString('en-IN')}
             </span>
+            <span className="text-[8px] text-neutral-500 font-mono">(Incl. GST)</span>
             {prices.retail && (
-              <span className="text-[11px] text-neutral-500 line-through font-mono leading-none">
+              <span className="text-[11px] text-neutral-500 line-through font-mono leading-none ml-0.5">
                 ₹{prices.retail.toLocaleString('en-IN')}
               </span>
             )}

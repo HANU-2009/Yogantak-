@@ -3,8 +3,8 @@ import { ShoppingBag, BookOpen, Clock, Heart, Sparkles, User } from 'lucide-reac
 import { CartItem } from '../types';
 
 interface NavbarProps {
-  activeTab: 'catalog' | 'lab' | 'orders';
-  setActiveTab: (tab: 'catalog' | 'lab' | 'orders') => void;
+  activeTab: 'catalog' | 'lab' | 'orders' | 'about' | 'contact' | 'privacy' | 'terms' | 'returns';
+  setActiveTab: (tab: 'catalog' | 'lab' | 'orders' | 'about' | 'contact' | 'privacy' | 'terms' | 'returns') => void;
   cart: CartItem[];
   setIsCartOpen: (open: boolean) => void;
   savedCount: number;
@@ -103,6 +103,26 @@ export default function Navbar({
             >
               <Clock className="w-4 h-4 opacity-75" />
               <span>Order History</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('about')}
+              className={`flex items-center gap-2 py-2 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'about'
+                  ? 'border-[#adc6ff] text-white'
+                  : 'border-transparent text-[#c1c6d7] hover:text-white'
+              }`}
+            >
+              <span>About</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('contact')}
+              className={`flex items-center gap-2 py-2 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'contact'
+                  ? 'border-[#adc6ff] text-white'
+                  : 'border-transparent text-[#c1c6d7] hover:text-white'
+              }`}
+            >
+              <span>Contact</span>
             </button>
           </nav>
 

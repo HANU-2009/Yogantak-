@@ -4,7 +4,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { db } from './db';
-import { hashPassword, verifyPassword, createToken, verifyToken } from './auth';
+import { adminAuth } from './firebase';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import https from 'https';
@@ -55,17 +55,42 @@ export interface AuthRequest extends Request {
   };
 }
 
-function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.status(401).json({ error: 'No token provided' });
+  if (!token) {
+    res.status(401).json({ error: 'No token provided' });
+    return;
+  }
 
-  const payload = verifyToken(token);
-  if (!payload) return res.status(403).json({ error: 'Invalid or expired token' });
+  if (!adminAuth) {
+    res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
+    return;
+  }
 
-  req.user = payload;
-  next();
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    // Look up the user in our local SQLite database by email
+    const userQuery = db.prepare('SELECT id, email, role, full_name as fullName FROM users WHERE email = ?');
+    const user = userQuery.get(decodedToken.email) as any;
+    
+    if (!user) {
+      res.status(403).json({ error: 'User not synced in local database' });
+      return;
+    }
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName
+    };
+    next();
+  } catch (error) {
+    res.status(403).json({ error: 'Invalid or expired Firebase token' });
+  }
 }
 
 function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
@@ -76,291 +101,73 @@ function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
 }
 
 // ==========================================
-// 1. AUTHENTICATION & PROFILE APIS
+// 1. FIREBASE AUTHENTICATION SYNC
 // ==========================================
 
-app.post('/api/auth/register', (req, res) => {
-  const { email, password, fullName } = req.body;
-  if (!email || !password || !fullName) {
-    return res.status(400).json({ error: 'Missing required registration parameters' });
+app.post('/api/auth/sync', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ error: 'No token provided' });
+    return;
+  }
+
+  if (!adminAuth) {
+    res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
+    return;
   }
 
   try {
-    const password_hash = hashPassword(password);
-    const insert = db.prepare(`
-      INSERT INTO users (email, password_hash, full_name, role)
-      VALUES (?, ?, ?, 'customer')
-    `);
-    const info = insert.run(email.toLowerCase(), password_hash, fullName);
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    const email = decodedToken.email?.toLowerCase();
     
-    const userId = Number(info.lastInsertRowid);
-    const token = createToken({ id: userId, email: email.toLowerCase(), role: 'customer', fullName });
-
-    res.status(201).json({ token, user: { id: userId, email, fullName, role: 'customer' } });
-  } catch (err: any) {
-    if (err.message.includes('UNIQUE constraint failed')) {
-      return res.status(400).json({ error: 'An account with this email already exists' });
+    if (!email) {
+      res.status(400).json({ error: 'Token missing email claim' });
+      return;
     }
-    res.status(500).json({ error: 'Failed to create user account' });
+
+    // Check if user exists
+    const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
+    let user = selectQuery.get(email) as any;
+    
+    if (!user) {
+      // Create new user profile
+      const fullName = decodedToken.name || email.split('@')[0];
+      const insert = db.prepare(`
+        INSERT INTO users (email, password_hash, full_name, role)
+        VALUES (?, 'firebase_managed', ?, 'customer')
+      `);
+      const info = insert.run(email, fullName);
+      const userId = Number(info.lastInsertRowid);
+      
+      user = {
+        id: userId,
+        email: email,
+        full_name: fullName,
+        role: 'customer'
+      };
+    }
+    
+    // Fetch cart
+    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
+    const cartData = cartQuery.get(user.id) as any;
+    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
+    
+    res.json({
+      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+      cart
+    });
+  } catch (error) {
+    console.error('Sync Error:', error);
+    res.status(403).json({ error: 'Invalid or expired Firebase token' });
   }
-});
-
-app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password required' });
-  }
-
-  const query = db.prepare('SELECT * FROM users WHERE email = ?');
-  const user = query.get(email.toLowerCase()) as any;
-
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    return res.status(400).json({ error: 'Invalid email or password credentials' });
-  }
-
-  const token = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
-  
-  // Retrieve saved cart if exists
-  const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-  const cartData = cartQuery.get(user.id) as any;
-  const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-
-  res.json({
-    token,
-    user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-    cart
-  });
 });
 
 app.get('/api/auth/me', authenticateToken, (req: AuthRequest, res) => {
   res.json({ user: req.user });
 });
 
-// ==========================================
-// 1b. SOCIAL OAUTH APIS (GOOGLE & MICROSOFT)
-// ==========================================
-
-function httpsGet(url: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error('Failed to parse response: ' + data));
-        }
-      });
-    }).on('error', (err) => {
-      reject(err);
-    });
-  });
-}
-
-function httpsGetWithAuth(url: string, token: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const options = {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    };
-    https.get(url, options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error('Failed to parse response: ' + data));
-        }
-      });
-    }).on('error', (err) => {
-      reject(err);
-    });
-  });
-}
-
-function findOrCreateSocialUser(email: string, fullName: string) {
-  const normalizedEmail = email.toLowerCase();
-  
-  // Check if user exists
-  const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
-  let user = selectQuery.get(normalizedEmail) as any;
-  
-  if (!user) {
-    // Create new user profile with a random password and role 'customer'
-    const randomPassword = crypto.randomBytes(32).toString('hex');
-    const password_hash = hashPassword(randomPassword);
-    
-    const insert = db.prepare(`
-      INSERT INTO users (email, password_hash, full_name, role)
-      VALUES (?, ?, ?, 'customer')
-    `);
-    const info = insert.run(normalizedEmail, password_hash, fullName || 'Social Login User');
-    const userId = Number(info.lastInsertRowid);
-    
-    user = {
-      id: userId,
-      email: normalizedEmail,
-      full_name: fullName || 'Social Login User',
-      role: 'customer'
-    };
-  }
-  
-  return user;
-}
-
-app.post('/api/auth/google', async (req, res) => {
-  const { token, isMock, email, name } = req.body;
-  
-  try {
-    let userEmail = '';
-    let userName = '';
-    
-    const isMockMode = isMock || 
-                       !process.env.GOOGLE_CLIENT_ID || 
-                       process.env.GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID';
-                       
-    if (isMockMode) {
-      userEmail = email || 'mockgoogle@gmail.com';
-      userName = name || 'Mock Google User';
-      console.log(`[AUTH-GOOGLE] Sandbox simulation login for: ${userEmail}`);
-    } else {
-      if (!token) {
-        return res.status(400).json({ error: 'Token is required' });
-      }
-      
-      const tokenInfo = await httpsGet(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
-      if (tokenInfo.error_description || tokenInfo.error) {
-        return res.status(401).json({ error: tokenInfo.error_description || 'Invalid Google token' });
-      }
-      
-      userEmail = tokenInfo.email;
-      userName = tokenInfo.name;
-    }
-    
-    if (!userEmail) {
-      return res.status(400).json({ error: 'Failed to retrieve email from Google profile' });
-    }
-    
-    const user = findOrCreateSocialUser(userEmail, userName);
-    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
-    
-    // Fetch cart
-    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-    const cartData = cartQuery.get(user.id) as any;
-    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-    
-    res.json({
-      token: sessionToken,
-      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-      cart,
-      isSimulation: isMockMode
-    });
-  } catch (err: any) {
-    console.error('Google Auth Error:', err);
-    res.status(500).json({ error: err.message || 'Google authentication failed' });
-  }
-});
-
-app.post('/api/auth/microsoft', async (req, res) => {
-  const { accessToken, isMock, email, name } = req.body;
-  
-  try {
-    let userEmail = '';
-    let userName = '';
-    
-    const isMockMode = isMock || 
-                       !process.env.MICROSOFT_CLIENT_ID || 
-                       process.env.MICROSOFT_CLIENT_ID === 'YOUR_MICROSOFT_CLIENT_ID';
-                       
-    if (isMockMode) {
-      userEmail = email || 'mockmicrosoft@outlook.com';
-      userName = name || 'Mock Microsoft User';
-      console.log(`[AUTH-MICROSOFT] Sandbox simulation login for: ${userEmail}`);
-    } else {
-      if (!accessToken) {
-        return res.status(400).json({ error: 'Access token is required' });
-      }
-      
-      const profile = await httpsGetWithAuth('https://graph.microsoft.com/v1.0/me', accessToken);
-      if (profile.error) {
-        return res.status(401).json({ error: profile.error.message || 'Invalid Microsoft token' });
-      }
-      
-      userEmail = profile.mail || profile.userPrincipalName;
-      userName = profile.displayName;
-    }
-    
-    if (!userEmail) {
-      return res.status(400).json({ error: 'Failed to retrieve email from Microsoft profile' });
-    }
-    
-    const user = findOrCreateSocialUser(userEmail, userName);
-    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
-    
-    // Fetch cart
-    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-    const cartData = cartQuery.get(user.id) as any;
-    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-    
-    res.json({
-      token: sessionToken,
-      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-      cart,
-      isSimulation: isMockMode
-    });
-  } catch (err: any) {
-    console.error('Microsoft Auth Error:', err);
-    res.status(500).json({ error: err.message || 'Microsoft authentication failed' });
-  }
-});
-
-app.post('/api/auth/otp/send', (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-  console.log(`[AUTH-OTP] Sending OTP to: ${email}`);
-  res.json({ success: true, message: 'SMS/Email OTP code sent: 4821' });
-});
-
-app.post('/api/auth/otp/verify', (req, res) => {
-  const { email, code } = req.body;
-  if (!email || !code) {
-    return res.status(400).json({ error: 'Email and verification code are required' });
-  }
-
-  if (code !== '4821') {
-    return res.status(400).json({ error: 'Invalid OTP code. Please enter 4821.' });
-  }
-
-  try {
-    const defaultName = email.split('@')[0];
-    const user = findOrCreateSocialUser(email, defaultName || 'OTP User');
-    const sessionToken = createToken({ id: user.id, email: user.email, role: user.role, fullName: user.full_name });
-
-    // Fetch cart
-    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-    const cartData = cartQuery.get(user.id) as any;
-    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-
-    console.log(`[AUTH-OTP] Verified user ${email} successfully`);
-    res.json({
-      token: sessionToken,
-      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-      cart
-    });
-  } catch (err: any) {
-    console.error('OTP Verification Error:', err);
-    res.status(500).json({ error: err.message || 'OTP verification failed' });
-  }
-});
 
 // ==========================================
 // 2. PRODUCT CATALOG APIS

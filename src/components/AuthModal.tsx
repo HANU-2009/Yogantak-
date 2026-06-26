@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, LogOut, CheckCircle, ShieldAlert, Key } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
+import { auth, googleProvider } from '../firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -43,25 +45,22 @@ export default function AuthModal({
     setSuccess(null);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      
+      const res = await fetch('/api/auth/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
+      if (!res.ok) throw new Error(data.error || 'Login failed');
 
-      setToken(data.token);
+      setToken(idToken);
       setUser(data.user);
       setCart(data.cart || []);
       setSuccess('Logged in successfully!');
-      setTimeout(() => {
-        onClose();
-        setSuccess(null);
-      }, 1000);
+      setTimeout(() => { onClose(); setSuccess(null); }, 1000);
     } catch (err: any) {
       setError(err.message);
     }
@@ -73,24 +72,22 @@ export default function AuthModal({
     setSuccess(null);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: fullName });
+      const idToken = await userCredential.user.getIdToken();
+      
+      const res = await fetch('/api/auth/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-      setToken(data.token);
+      setToken(idToken);
       setUser(data.user);
       setSuccess('Account created successfully!');
-      setTimeout(() => {
-        onClose();
-        setSuccess(null);
-      }, 1000);
+      setTimeout(() => { onClose(); setSuccess(null); }, 1000);
     } catch (err: any) {
       setError(err.message);
     }
@@ -370,15 +367,13 @@ export default function AuthModal({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await signOut(auth); } catch(e) {}
     setUser(null);
     setToken(null);
     setCart([]);
     setSuccess('Logged out successfully.');
-    setTimeout(() => {
-      onClose();
-      setSuccess(null);
-    }, 800);
+    setTimeout(() => { onClose(); setSuccess(null); }, 800);
   };
 
   if (!isOpen) return null;
@@ -662,7 +657,7 @@ export default function AuthModal({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={handleGoogleSignIn}
+                    onClick={async () => { try { const cred = await signInWithPopup(auth, googleProvider); const token = await cred.user.getIdToken(); const res = await fetch("/api/auth/sync", { method: "POST", headers: { "Authorization": `Bearer ${token}` }}); const data = await res.json(); if(res.ok) { setToken(token); setUser(data.user); setCart(data.cart || []); setSuccess("Logged in via Google!"); setTimeout(onClose, 1000); } } catch(e:any) { setError(e.message); } }}
                     className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">

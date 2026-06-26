@@ -450,6 +450,10 @@ export default function ProductDetailsModal({
                   <span className="text-[10.5px] font-mono text-[#8F7D6D] uppercase tracking-wider pl-1 font-semibold">
                     1.2k verified reviews
                   </span>
+                  <div className="ml-auto flex items-center gap-1 bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 px-2 py-0.5 rounded-md">
+                    <div className="w-1.5 h-1.5 bg-[#22c55e] rounded-full animate-pulse"></div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider font-mono">In Stock</span>
+                  </div>
                 </div>
 
                 {/* Main Product Name (rendered using Serif Cormorant font) */}
@@ -565,9 +569,12 @@ export default function ProductDetailsModal({
                       One time purchase
                     </span>
                   </div>
-                  <strong className="text-sm font-mono text-[#2B1B15]">
-                    ₹{bundleBasePrice.toLocaleString('en-IN')}
-                  </strong>
+                  <div className="flex flex-col items-end">
+                    <strong className="text-sm font-mono text-[#2B1B15]">
+                      ₹{bundleBasePrice.toLocaleString('en-IN')}
+                    </strong>
+                    <span className="text-[9px] text-[#8F7D6D] font-mono">(Incl. GST)</span>
+                  </div>
                 </div>
 
                 {/* 2. SUBSCRIBE & SAVE tab */}
@@ -599,9 +606,12 @@ export default function ProductDetailsModal({
                       <span className="text-[10px] font-mono text-[#8F7D6D] line-through">
                         ₹{bundleBasePrice.toLocaleString('en-IN')}
                       </span>
-                      <strong className="text-sm font-mono text-[#C24B35]">
-                        ₹{finalPrice.toLocaleString('en-IN')}
-                      </strong>
+                      <div className="flex flex-col items-end">
+                        <strong className="text-sm font-mono text-[#C24B35]">
+                          ₹{finalPrice.toLocaleString('en-IN')}
+                        </strong>
+                        <span className="text-[9px] text-[#8F7D6D] font-mono">(Incl. GST)</span>
+                      </div>
                     </div>
                   </div>
 

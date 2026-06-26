@@ -13,6 +13,11 @@ import OrdersList from './components/OrdersList';
 import ScrollVideoHeader from './components/ScrollVideoHeader';
 import AuthModal from './components/AuthModal';
 import AdminDashboard from './components/AdminDashboard';
+import AboutUs from './components/AboutUs';
+import ContactUs from './components/ContactUs';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsConditions from './components/TermsConditions';
+import ReturnsPolicy from './components/ReturnsPolicy';
 import { Sparkles, HelpCircle, ShieldAlert, BadgeCheck, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CATEGORIES = [
@@ -48,7 +53,7 @@ const getProductCaseTypes = (product: any): string[] => {
 export default function App() {
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'catalog' | 'lab' | 'orders'>('catalog');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'lab' | 'orders' | 'about' | 'contact' | 'privacy' | 'terms' | 'returns'>('catalog');
   
   // Products, Auth, and Admin states
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
@@ -82,6 +87,53 @@ export default function App() {
       setUser(null);
     }
   }, [token]);
+
+  // Handle SEO Metadata when tab changes
+  useEffect(() => {
+    let title = "Yogantak | Premium Phone Cases";
+    let metaDesc = "Discover bespoke, highly durable premium phone cases at Yogantak. Meticulous casing shells built on durability and tactile beauty.";
+    
+    switch (activeTab) {
+      case 'about':
+        title = "About Us | Yogantak";
+        metaDesc = "Learn about Yogantak's mission, values, and our commitment to premium sustainable phone cases.";
+        break;
+      case 'contact':
+        title = "Contact Us | Yogantak";
+        metaDesc = "Get in touch with the Yogantak concierge team for support, bespoke orders, and general inquiries.";
+        break;
+      case 'privacy':
+        title = "Privacy Policy | Yogantak";
+        metaDesc = "Read our Privacy Policy to understand how we securely collect, use, and handle your data in compliance with Indian laws.";
+        break;
+      case 'terms':
+        title = "Terms & Conditions | Yogantak";
+        metaDesc = "Our terms and conditions outlining website use, secure payments, and liability.";
+        break;
+      case 'returns':
+        title = "Returns & Refunds Policy | Yogantak";
+        metaDesc = "Learn about our 7-day hassle-free return and refund policy for premium phone cases.";
+        break;
+      case 'catalog':
+        title = "Catalog | Yogantak Premium Cases";
+        break;
+      case 'lab':
+        title = "Personalization Lab | Yogantak";
+        break;
+    }
+    
+    document.title = title;
+    let metaTag = document.querySelector('meta[name="description"]');
+    if (metaTag) {
+      metaTag.setAttribute('content', metaDesc);
+    } else {
+      metaTag = document.createElement('meta');
+      metaTag.setAttribute('name', 'description');
+      metaTag.setAttribute('content', metaDesc);
+      document.head.appendChild(metaTag);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
 
   // Fetch products from database
   useEffect(() => {
@@ -776,6 +828,21 @@ export default function App() {
           <OrdersList orders={orders} onCancelOrder={handleCancelOrder} />
         )}
 
+        {/* TAB 4: ABOUT US */}
+        {activeTab === 'about' && <AboutUs />}
+
+        {/* TAB 5: CONTACT US */}
+        {activeTab === 'contact' && <ContactUs />}
+
+        {/* TAB 6: PRIVACY POLICY */}
+        {activeTab === 'privacy' && <PrivacyPolicy />}
+
+        {/* TAB 7: TERMS & CONDITIONS */}
+        {activeTab === 'terms' && <TermsConditions />}
+
+        {/* TAB 8: RETURNS POLICY */}
+        {activeTab === 'returns' && <ReturnsPolicy />}
+
       </main>
 
       {/* Persistent global modular slide-overs and checkout containers */}
@@ -837,7 +904,16 @@ export default function App() {
             <div className="flex flex-col gap-1 text-[#c1c6d7]">
               <span>Email: concierge@yogantak.com</span>
               <span>Support Desk: 1-800-YOGANTAK</span>
-              <span>Designed in minimalist creative workspaces. All rights reserved. • 2026</span>
+              <div className="flex gap-3 pt-2 font-bold uppercase tracking-wider text-[10px]">
+                <button onClick={() => setActiveTab('about')} className="hover:text-white transition-colors cursor-pointer">About Us</button>
+                <button onClick={() => setActiveTab('contact')} className="hover:text-white transition-colors cursor-pointer">Contact</button>
+              </div>
+              <div className="flex gap-3 pt-1 font-bold uppercase tracking-wider text-[10px]">
+                <button onClick={() => setActiveTab('privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy Policy</button>
+                <button onClick={() => setActiveTab('terms')} className="hover:text-white transition-colors cursor-pointer">Terms</button>
+                <button onClick={() => setActiveTab('returns')} className="hover:text-white transition-colors cursor-pointer">Returns</button>
+              </div>
+              <span className="mt-2 text-neutral-500">Designed in minimalist creative workspaces. All rights reserved. • 2026</span>
             </div>
           </div>
 
