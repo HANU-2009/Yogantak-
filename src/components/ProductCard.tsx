@@ -87,12 +87,12 @@ export default function ProductCard({
       >
         {/* Left: Phone Image Area */}
         <div className="w-40 bg-[#202024]/40 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden shrink-0 aspect-[4/5]">
-          <div className="transform scale-[0.65] transition-transform duration-500 group-hover:scale-[0.68]">
+          <div className="transform scale-[0.65] transition-transform duration-500 group-hover:scale-[0.68] w-full h-full">
             <PhoneCaseRenderer
               model={activeModel}
               material={activeMaterial}
               color={activeColor}
-              size="md"
+              size="fill"
               magsafe={product.magsafe}
             />
           </div>
@@ -176,7 +176,7 @@ export default function ProductCard({
       {/* 1. Image Container (Ratio 4/5) */}
       <div 
         onClick={() => onOpenDetails(product, activeModel, activeColor, activeMaterial)}
-        className="w-full bg-[#202024]/40 group-hover:bg-[#202024]/75 aspect-[4/5] rounded-2xl flex items-center justify-center p-5 cursor-pointer relative overflow-hidden transition-colors duration-300 select-none"
+        className="w-full bg-[#1a1a1f]/60 group-hover:bg-[#1a1a1f]/90 aspect-[4/5] rounded-2xl flex items-center justify-center p-3 cursor-pointer relative transition-colors duration-300 select-none overflow-hidden"
       >
         {/* Dynamic Badge Overlay */}
         {badge && (
@@ -207,12 +207,12 @@ export default function ProductCard({
         </button>
 
         {/* Phone Case Render */}
-        <div className="transform scale-[0.74] group-hover:scale-[0.77] transition-transform duration-500 ease-out origin-center">
+        <div className="w-full h-full flex items-center justify-center">
           <PhoneCaseRenderer
             model={activeModel}
             material={activeMaterial}
             color={activeColor}
-            size="md"
+            size="fill"
             magsafe={product.magsafe}
           />
         </div>

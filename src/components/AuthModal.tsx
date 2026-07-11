@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, LogOut, CheckCircle, ShieldAlert, Key } from 'lucide-react';
+import { X, Mail, Lock, User, LogOut, CheckCircle, ShieldAlert, Key, Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 
@@ -34,15 +34,18 @@ export default function AuthModal({
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [sandboxProvider, setSandboxProvider] = useState<'google' | 'microsoft' | null>(null);
   const [sandboxEmail, setSandboxEmail] = useState('');
   const [sandboxName, setSandboxName] = useState('');
 
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setLoading(true);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -63,6 +66,8 @@ export default function AuthModal({
       setTimeout(() => { onClose(); setSuccess(null); }, 1000);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -70,6 +75,7 @@ export default function AuthModal({
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setLoading(true);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -90,6 +96,8 @@ export default function AuthModal({
       setTimeout(() => { onClose(); setSuccess(null); }, 1000);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -165,107 +173,73 @@ export default function AuthModal({
     }
   };
 
-  const handleGoogleSignIn = () => {
+  // ── Google Sign-In via Firebase popup ──
+  const handleGoogleSignIn = async () => {
     setError(null);
     setSuccess(null);
+    setLoading(true);
 
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
+    try {
+      // Firebase popup — works when VITE_FIREBASE_API_KEY is configured
+      const cred = await signInWithPopup(auth, googleProvider);
+      const idToken = await cred.user.getIdToken();
 
-    if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') {
-      setSandboxProvider('google');
-      setSandboxEmail('');
-      setSandboxName('');
-      return;
-    }
+      // Sync with backend
+      const res = await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
 
-    const win = window as any;
-    if (win.google?.accounts?.id) {
-      win.google.accounts.id.prompt();
-    } else {
-      setError('Google Sign In SDK is still loading. Please try again.');
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+
+      setToken(idToken);
+      setUser(data.user);
+      setCart(data.cart || []);
+      setSuccess('Signed in with Google!');
+      setTimeout(() => { onClose(); setSuccess(null); }, 800);
+    } catch (err: any) {
+      // If Firebase config not set, fall back to sandbox mode
+      if (err.code === 'auth/api-key-not-valid' || err.code === 'auth/configuration-not-found' || err.message?.includes('API key')) {
+        setSandboxProvider('google');
+        setSandboxEmail('');
+        setSandboxName('');
+      } else {
+        setError(err.message || 'Google sign-in failed');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMicrosoftSignIn = () => {
+  const handleMicrosoftSignIn = async () => {
     setError(null);
     setSuccess(null);
-    
-    const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID || 'YOUR_MICROSOFT_CLIENT_ID';
-    
-    if (!microsoftClientId || microsoftClientId === 'YOUR_MICROSOFT_CLIENT_ID') {
-      setSandboxProvider('microsoft');
-      setSandboxEmail('');
-      setSandboxName('');
-      return;
+    setLoading(true);
+
+    try {
+      const { microsoftProvider } = await import('../firebase');
+      const cred = await signInWithPopup(auth, microsoftProvider);
+      const idToken = await cred.user.getIdToken();
+
+      const res = await fetch('/api/auth/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+
+      setToken(idToken);
+      setUser(data.user);
+      setCart(data.cart || []);
+      setSuccess('Signed in with Microsoft!');
+      setTimeout(() => { onClose(); setSuccess(null); }, 800);
+    } catch (err: any) {
+      setError(err.message || 'Microsoft sign-in failed');
+    } finally {
+      setLoading(false);
     }
-
-    // Real Microsoft OAuth 2.0 Implicit Flow Popup
-    const redirectUri = window.location.origin + '/';
-    const scope = 'user.read';
-    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${microsoftClientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
-
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      authUrl,
-      'MicrosoftSignIN',
-      `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
-    );
-
-    if (!popup) {
-      setError('Blocker active. Please enable popups for Microsoft Sign In.');
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        if (popup.closed) {
-          clearInterval(interval);
-          return;
-        }
-
-        if (popup.location.href.startsWith(redirectUri)) {
-          const hash = popup.location.hash;
-          popup.close();
-          clearInterval(interval);
-
-          const params = new URLSearchParams(hash.substring(1));
-          const accessToken = params.get('access_token');
-          
-          if (!accessToken) {
-            setError('Failed to retrieve Microsoft access token');
-            return;
-          }
-
-          setSuccess('Microsoft authorized. Resolving user profile...');
-          
-          const res = await fetch('/api/auth/microsoft', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accessToken })
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            throw new Error(data.error || 'Microsoft Sign In failed');
-          }
-
-          setToken(data.token);
-          setUser(data.user);
-          setCart(data.cart || []);
-          setSuccess('Logged in successfully via Microsoft!');
-          setTimeout(() => {
-            onClose();
-            setSuccess(null);
-          }, 1000);
-        }
-      } catch (e) {
-        // Cross-origin exception is expected before redirect, ignore it
-      }
-    }, 500);
   };
 
   const handleSandboxSubmit = async (e: React.FormEvent) => {
@@ -368,12 +342,13 @@ export default function AuthModal({
   };
 
   const handleLogout = async () => {
+    setLoading(true);
     try { await signOut(auth); } catch(e) {}
     setUser(null);
     setToken(null);
     setCart([]);
     setSuccess('Logged out successfully.');
-    setTimeout(() => { onClose(); setSuccess(null); }, 800);
+    setTimeout(() => { onClose(); setSuccess(null); setLoading(false); }, 800);
   };
 
   if (!isOpen) return null;
@@ -657,27 +632,20 @@ export default function AuthModal({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={async () => { try { const cred = await signInWithPopup(auth, googleProvider); const token = await cred.user.getIdToken(); const res = await fetch("/api/auth/sync", { method: "POST", headers: { "Authorization": `Bearer ${token}` }}); const data = await res.json(); if(res.ok) { setToken(token); setUser(data.user); setCart(data.cart || []); setSuccess("Logged in via Google!"); setTimeout(onClose, 1000); } } catch(e:any) { setError(e.message); } }}
-                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans disabled:opacity-50"
                   >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#EA4335"
-                        d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z"
-                      />
-                      <path
-                        fill="#4285F4"
-                        d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z"
-                      />
-                    </svg>
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
+                        <path fill="#34A853" d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z" />
+                        <path fill="#4285F4" d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z" />
+                        <path fill="#FBBC05" d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z" />
+                      </svg>
+                    )}
                     <span>Google</span>
                   </button>
 

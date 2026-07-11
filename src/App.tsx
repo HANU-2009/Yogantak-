@@ -143,12 +143,16 @@ export default function App() {
         return res.json();
       })
       .then(data => {
-        setProducts(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+        }
+        // if API returns empty array, keep static PRODUCTS as fallback
       })
       .catch(err => {
         console.error('Error fetching database products, falling back to static config:', err);
       });
   }, []);
+
 
   // Fetch wishlists and cart sync when logged in
   useEffect(() => {
@@ -215,8 +219,8 @@ export default function App() {
   const [selectedCaseTypes, setSelectedCaseTypes] = useState<string[]>([]);
   const [selectedMaterials, setSelectedMaterials] = useState<CaseMaterial[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [minPrice, setMinPrice] = useState<number>(20);
-  const [maxPrice, setMaxPrice] = useState<number>(100);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [magsafeFilter, setMagsafeFilter] = useState<boolean>(false);
   const [wirelessFilter, setWirelessFilter] = useState<boolean>(false);
@@ -367,8 +371,8 @@ export default function App() {
     setSelectedCaseTypes([]);
     setSelectedMaterials([]);
     setSelectedColors([]);
-    setMinPrice(20);
-    setMaxPrice(100);
+    setMinPrice(0);
+    setMaxPrice(10000);
     setSortBy('featured');
     setMagsafeFilter(false);
     setWirelessFilter(false);
@@ -649,38 +653,8 @@ export default function App() {
                 })}
               </div>
 
-              {/* Main Content: Sidebar + Grid Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Left Side: Filter Sidebar */}
-                <div className="lg:col-span-1">
-                  <FilterSidebar
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    selectedModels={selectedModels}
-                    setSelectedModels={setSelectedModels}
-                    selectedCaseTypes={selectedCaseTypes}
-                    setSelectedCaseTypes={setSelectedCaseTypes}
-                    selectedMaterials={selectedMaterials}
-                    setSelectedMaterials={setSelectedMaterials}
-                    selectedColors={selectedColors}
-                    toggleColor={toggleColor}
-                    minPrice={minPrice}
-                    setMinPrice={setMinPrice}
-                    maxPrice={maxPrice}
-                    setMaxPrice={setMaxPrice}
-                    magsafeFilter={magsafeFilter}
-                    setMagsafeFilter={setMagsafeFilter}
-                    wirelessFilter={wirelessFilter}
-                    setWirelessFilter={setWirelessFilter}
-                    inStockFilter={inStockFilter}
-                    setInStockFilter={setInStockFilter}
-                    resetAll={handleResetFilters}
-                    productsCount={getFilteredProducts().length}
-                  />
-                </div>
-
-                {/* Right Side: Grid + Pagination */}
-                <div className="lg:col-span-3 flex flex-col gap-8">
+              {/* Main Content: Full-width Product Grid */}
+              <div className="flex flex-col gap-8">
                   {/* Grid header row */}
                   <div className="flex items-center justify-between border-b border-neutral-850 pb-3">
                     <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
@@ -723,7 +697,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div className={gridView === 'grid' 
-                      ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+                      ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
                       : "flex flex-col gap-4"
                     }>
                       {getCurrentPageProducts().map((product) => (
@@ -790,7 +764,6 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                </div>
               </div>
 
               {/* Bottom Features Banner */}

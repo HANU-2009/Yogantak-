@@ -337,7 +337,10 @@ export default function CheckoutModal({
         return;
       }
 
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T5psKS97goYKw1';
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!keyId) {
+        throw new Error('Razorpay key not configured. Ensure VITE_RAZORPAY_KEY_ID is set in .env');
+      }
 
       // 2. Configure checkout options
       const options = {

@@ -354,15 +354,15 @@ export default function FilterSidebar({
               <div className="px-1">
                 <input
                   type="range"
-                  min="20"
-                  max="100"
+                  min="0"
+                  max="10000"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(parseInt(e.target.value))}
                   className="w-full custom-slider"
                 />
                 <div className="flex justify-between text-[10px] font-mono text-neutral-450 mt-1">
-                  <span>Min: $20</span>
-                  <span>Max Limit: $100</span>
+                  <span>Min: ₹0</span>
+                  <span>Max Limit: ₹10,000</span>
                 </div>
               </div>
 
@@ -371,13 +371,13 @@ export default function FilterSidebar({
                 <div className="flex-1">
                   <span className="text-[10px] text-neutral-400 uppercase tracking-wider block mb-1">Min</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">₹</span>
                     <input
                       type="number"
-                      min="20"
+                      min="0"
                       max={maxPrice}
                       value={minPrice}
-                      onChange={(e) => setMinPrice(Math.max(20, parseInt(e.target.value) || 20))}
+                      onChange={(e) => setMinPrice(Math.max(0, parseInt(e.target.value) || 0))}
                       className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2 pl-7 pr-3 text-xs text-white focus:outline-none focus:border-[#adc6ff] font-mono"
                     />
                   </div>
@@ -385,13 +385,13 @@ export default function FilterSidebar({
                 <div className="flex-1">
                   <span className="text-[10px] text-neutral-400 uppercase tracking-wider block mb-1">Max</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">₹</span>
                     <input
                       type="number"
                       min={minPrice}
-                      max="100"
+                      max="10000"
                       value={maxPrice}
-                      onChange={(e) => setMaxPrice(Math.min(100, parseInt(e.target.value) || 100))}
+                      onChange={(e) => setMaxPrice(Math.min(10000, parseInt(e.target.value) || 10000))}
                       className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2 pl-7 pr-3 text-xs text-white focus:outline-none focus:border-[#adc6ff] font-mono"
                     />
                   </div>

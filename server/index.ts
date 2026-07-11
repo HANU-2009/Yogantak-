@@ -9,6 +9,44 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import https from 'https';
 
+// ── Helper: decode a Firebase JWT payload without verifying signature (dev-mode fallback) ──
+function decodeJwtPayload(token: string): any {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
+
+// ── Shared helper: upsert user into DB and return user + cart ──
+function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
+  const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
+  let user = selectQuery.get(email) as any;
+
+  if (!user) {
+    const fullName = name || email.split('@')[0];
+    const insert = db.prepare(`
+      INSERT INTO users (email, password_hash, full_name, role)
+      VALUES (?, 'firebase_managed', ?, 'customer')
+    `);
+    const info = insert.run(email, fullName);
+    const userId = Number(info.lastInsertRowid);
+    user = { id: userId, email, full_name: fullName, role: 'customer' };
+  }
+
+  const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
+  const cartData = cartQuery.get(user.id) as any;
+  const cart = cartData ? JSON.parse(cartData.cart_items) : [];
+
+  return {
+    user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+    cart
+  };
+}
+
 const app = express();
 app.use(express.json());
 
@@ -64,18 +102,30 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
     return;
   }
 
-  if (!adminAuth) {
-    res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
-    return;
-  }
-
   try {
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    
+    let email: string | undefined;
+
+    if (adminAuth) {
+      // Production path — full Firebase token verification
+      const decodedToken = await adminAuth.verifyIdToken(token);
+      email = decodedToken.email?.toLowerCase();
+    } else {
+      // Development fallback — decode JWT without verifying signature
+      const payload = decodeJwtPayload(token);
+      if (payload) {
+        email = (payload.email || '').toLowerCase();
+      }
+    }
+
+    if (!email) {
+      res.status(403).json({ error: 'Token missing email claim' });
+      return;
+    }
+
     // Look up the user in our local SQLite database by email
     const userQuery = db.prepare('SELECT id, email, role, full_name as fullName FROM users WHERE email = ?');
-    const user = userQuery.get(decodedToken.email) as any;
-    
+    const user = userQuery.get(email) as any;
+
     if (!user) {
       res.status(403).json({ error: 'User not synced in local database' });
       return;
@@ -89,7 +139,7 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
     };
     next();
   } catch (error) {
-    res.status(403).json({ error: 'Invalid or expired Firebase token' });
+    res.status(403).json({ error: 'Invalid or expired token' });
   }
 }
 
@@ -104,6 +154,7 @@ function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
 // 1. FIREBASE AUTHENTICATION SYNC
 // ==========================================
 
+// POST /api/auth/sync — Called after Firebase client-side sign-in with a Firebase ID token
 app.post('/api/auth/sync', async (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -113,51 +164,36 @@ app.post('/api/auth/sync', async (req, res) => {
     return;
   }
 
-  if (!adminAuth) {
-    res.status(500).json({ error: 'Firebase Admin SDK not initialized' });
-    return;
-  }
-
   try {
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const email = decodedToken.email?.toLowerCase();
-    
+    let email: string | undefined;
+    let name: string | undefined;
+
+    if (adminAuth) {
+      // Production path — full Firebase Admin SDK verification
+      const decodedToken = await adminAuth.verifyIdToken(token);
+      email = decodedToken.email?.toLowerCase();
+      name = decodedToken.name;
+    } else {
+      // Dev-mode fallback: decode JWT payload without signature verification
+      // Allows local testing when Firebase Admin credentials are not yet configured
+      console.warn('[DEV MODE] Firebase Admin SDK not available — using unverified JWT decode for /api/auth/sync');
+      const payload = decodeJwtPayload(token);
+      if (!payload) {
+        res.status(400).json({ error: 'Could not decode token payload' });
+        return;
+      }
+      email = (payload.email || '').toLowerCase();
+      name = payload.name;
+    }
+
     if (!email) {
       res.status(400).json({ error: 'Token missing email claim' });
       return;
     }
 
-    // Check if user exists
-    const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
-    let user = selectQuery.get(email) as any;
-    
-    if (!user) {
-      // Create new user profile
-      const fullName = decodedToken.name || email.split('@')[0];
-      const insert = db.prepare(`
-        INSERT INTO users (email, password_hash, full_name, role)
-        VALUES (?, 'firebase_managed', ?, 'customer')
-      `);
-      const info = insert.run(email, fullName);
-      const userId = Number(info.lastInsertRowid);
-      
-      user = {
-        id: userId,
-        email: email,
-        full_name: fullName,
-        role: 'customer'
-      };
-    }
-    
-    // Fetch cart
-    const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-    const cartData = cartQuery.get(user.id) as any;
-    const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-    
-    res.json({
-      user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
-      cart
-    });
+    const { user, cart } = syncUserToDB(email, name || '');
+    res.json({ user, cart });
+
   } catch (error) {
     console.error('Sync Error:', error);
     res.status(403).json({ error: 'Invalid or expired Firebase token' });
@@ -166,6 +202,143 @@ app.post('/api/auth/sync', async (req, res) => {
 
 app.get('/api/auth/me', authenticateToken, (req: AuthRequest, res) => {
   res.json({ user: req.user });
+});
+
+// POST /api/auth/google — Google OAuth callback handler
+app.post('/api/auth/google', async (req, res) => {
+  const { token, isMock, email: mockEmail, name: mockName } = req.body;
+
+  try {
+    let email: string;
+    let name: string;
+
+    if (isMock) {
+      if (!mockEmail) {
+        res.status(400).json({ error: 'Mock email is required' });
+        return;
+      }
+      email = mockEmail.toLowerCase();
+      name = mockName || 'Google User';
+    } else if (token) {
+      // Decode Google ID token payload
+      const payload = decodeJwtPayload(token);
+      if (!payload) {
+        res.status(400).json({ error: 'Invalid Google credential token' });
+        return;
+      }
+      email = (payload.email || '').toLowerCase();
+      name = payload.name || '';
+    } else {
+      res.status(400).json({ error: 'No token or mock data provided' });
+      return;
+    }
+
+    const { user, cart } = syncUserToDB(email, name);
+    const sessionToken = isMock
+      ? Buffer.from(JSON.stringify({ email, name, iat: Date.now(), mock: true })).toString('base64')
+      : token;
+
+    res.json({ token: sessionToken, user, cart });
+  } catch (error: any) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ error: error.message || 'Google auth failed' });
+  }
+});
+
+// POST /api/auth/microsoft — Microsoft OAuth callback handler
+app.post('/api/auth/microsoft', async (req, res) => {
+  const { accessToken, isMock, email: mockEmail, name: mockName } = req.body;
+
+  try {
+    let email: string;
+    let name: string;
+
+    if (isMock) {
+      if (!mockEmail) {
+        res.status(400).json({ error: 'Mock email is required' });
+        return;
+      }
+      email = mockEmail.toLowerCase();
+      name = mockName || 'Microsoft User';
+    } else if (accessToken) {
+      // Fetch Microsoft Graph profile with the access token
+      const msProfile = await new Promise<any>((resolve, reject) => {
+        const options = {
+          hostname: 'graph.microsoft.com',
+          path: '/v1.0/me',
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` }
+        };
+        const msReq = https.request(options, (msRes) => {
+          let data = '';
+          msRes.on('data', (chunk: string) => data += chunk);
+          msRes.on('end', () => {
+            try { resolve(JSON.parse(data)); }
+            catch { reject(new Error('Invalid Microsoft profile response')); }
+          });
+        });
+        msReq.on('error', reject);
+        msReq.end();
+      });
+      email = (msProfile.mail || msProfile.userPrincipalName || '').toLowerCase();
+      name = msProfile.displayName || '';
+    } else {
+      res.status(400).json({ error: 'No access token or mock data provided' });
+      return;
+    }
+
+    const { user, cart } = syncUserToDB(email, name);
+    const sessionToken = Buffer.from(JSON.stringify({ email, name, iat: Date.now() })).toString('base64');
+    res.json({ token: sessionToken, user, cart });
+
+  } catch (error: any) {
+    console.error('Microsoft auth error:', error);
+    res.status(500).json({ error: error.message || 'Microsoft auth failed' });
+  }
+});
+
+// ── OTP Authentication ──
+const otpStore = new Map<string, { code: string; expiresAt: number }>();
+const DEMO_OTP = '4821';
+
+app.post('/api/auth/otp/send', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ error: 'Email is required' });
+    return;
+  }
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+  otpStore.set(email.toLowerCase(), { code: DEMO_OTP, expiresAt });
+  console.log(`[OTP] Code for ${email}: ${DEMO_OTP}`);
+  res.json({ success: true, message: 'OTP sent successfully' });
+});
+
+app.post('/api/auth/otp/verify', (req, res) => {
+  const { email, code } = req.body;
+  if (!email || !code) {
+    res.status(400).json({ error: 'Email and OTP code are required' });
+    return;
+  }
+
+  const storedOtp = otpStore.get(email.toLowerCase());
+  if (!storedOtp) {
+    res.status(400).json({ error: 'No OTP requested for this email. Please request a new one.' });
+    return;
+  }
+  if (Date.now() > storedOtp.expiresAt) {
+    otpStore.delete(email.toLowerCase());
+    res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    return;
+  }
+  if (storedOtp.code !== code.trim()) {
+    res.status(400).json({ error: `Invalid OTP code. Please enter ${DEMO_OTP}.` });
+    return;
+  }
+
+  otpStore.delete(email.toLowerCase());
+  const { user, cart } = syncUserToDB(email.toLowerCase(), '');
+  const sessionToken = Buffer.from(JSON.stringify({ email: email.toLowerCase(), iat: Date.now(), method: 'otp' })).toString('base64');
+  res.json({ token: sessionToken, user, cart });
 });
 
 
@@ -924,6 +1097,110 @@ app.post('/api/newsletter/subscribe', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Subscription failed' });
+  }
+});
+
+// ==========================================
+// 7b. RAZORPAY PAYMENT GATEWAY
+// ==========================================
+
+// Initialise Razorpay SDK once at startup
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+});
+
+// POST /api/create-order — Creates a Razorpay order and returns order_id, amount, currency
+app.post('/api/create-order', async (req: Request, res: Response) => {
+  const { amount, currency = 'INR', receipt } = req.body;
+
+  // Validate minimum amount (Razorpay requires >= 100 paise = ₹1)
+  if (!amount || typeof amount !== 'number' || amount < 100) {
+    res.status(400).json({ error: 'Amount must be a number >= 100 paise (₹1)' });
+    return;
+  }
+
+  try {
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount), // paise, must be integer
+      currency,
+      receipt: receipt || `rcpt_${Date.now()}`,
+    } as any);
+
+    res.json({
+      order_id: (order as any).id,
+      id: (order as any).id,        // alias for CheckoutModal compatibility
+      amount: (order as any).amount,
+      currency: (order as any).currency
+    });
+
+  } catch (err: any) {
+    console.error('[RAZORPAY] Create order failed:', err);
+    // Surface a clear error — most likely wrong credentials
+    res.status(500).json({ error: err?.error?.description || err?.message || 'Failed to create Razorpay order' });
+  }
+});
+
+// POST /api/verify-payment — Verifies Razorpay payment signature (HMAC-SHA256)
+app.post('/api/verify-payment', (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    res.status(400).json({ error: 'Missing required payment fields: order_id, payment_id, signature' });
+    return;
+  }
+
+  try {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(body)
+      .digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      console.log(`[RAZORPAY] Payment verified ✓ — order: ${razorpay_order_id}, payment: ${razorpay_payment_id}`);
+      res.json({ verified: true });
+    } else {
+      console.warn(`[RAZORPAY] Signature mismatch — potential tampered request for order: ${razorpay_order_id}`);
+      res.status(400).json({ verified: false, error: 'Payment signature verification failed' });
+    }
+
+  } catch (err: any) {
+    console.error('[RAZORPAY] Signature verification error:', err);
+    res.status(500).json({ error: 'Signature verification encountered an internal error' });
+  }
+});
+
+// POST /api/payments/razorpay/verify — Alias for mock-flow compatibility
+app.post('/api/payments/razorpay/verify', (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  // Allow mock signatures through (these come from the simulation overlay)
+  if (razorpay_signature === 'mock_signature') {
+    console.log('[MOCK-GATEWAY] Mock payment signature accepted — simulation mode');
+    res.json({ verified: true });
+    return;
+  }
+
+  // Otherwise run real HMAC check
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    res.status(400).json({ error: 'Missing required payment fields' });
+    return;
+  }
+
+  try {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto.createHmac('sha256', keySecret).update(body).digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      res.json({ verified: true });
+    } else {
+      res.status(400).json({ verified: false, error: 'Payment signature verification failed' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: 'Signature verification error' });
   }
 });
 

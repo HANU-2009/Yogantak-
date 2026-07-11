@@ -97,7 +97,7 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
   const [isLoaded, setIsLoaded] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isCinematic, setIsCinematic] = useState(false);
-  
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Sync state with HTML video player
@@ -186,14 +186,14 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
 
   return (
     <section className="relative bg-[#0F1012] py-6 sm:py-12 md:py-16 overflow-hidden border-b border-neutral-900 font-sans">
-      
+
       {/* Background ambient light flare */}
       <div className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full bg-[#e9c349]/5 blur-[130px] pointer-events-none z-0" />
       <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-[#adc6ff]/5 blur-[110px] pointer-events-none z-0" />
 
       {/* Cinematic Modal expansion for ultra-wide theater view */}
       {isCinematic && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 transition-opacity duration-300"
           id="theaterModal"
         >
@@ -254,12 +254,12 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
               </div>
 
               {/* Progress Bar Timeline */}
-              <div 
+              <div
                 className="w-full h-1 bg-neutral-800 cursor-pointer relative"
                 onClick={handleProgressBarClick}
               >
-                <div 
-                  className="h-full bg-white transition-all duration-100" 
+                <div
+                  className="h-full bg-white transition-all duration-100"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -270,12 +270,12 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
 
       {/* Main Luxury Tablet Bezel Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         <div className="bg-[#141517] rounded-2xl sm:rounded-3xl border border-neutral-800/80 p-3 sm:p-5 md:p-8 shadow-2xl transition-all">
-          
+
           {/* YOGANTAK Header Bar */}
           <div className="flex items-center justify-between gap-3 border-b border-neutral-800/65 pb-4 sm:pb-6 mb-4 sm:mb-6">
-            
+
             {/* Left Pill badge: NEW */}
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-neutral-800/40 border border-neutral-700/50 rounded-full text-[10px] font-mono font-medium tracking-widest text-[#DBE9EE] uppercase select-none">
               <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -304,10 +304,10 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
               {/* Welcome Avatar Greeting */}
               <div className="flex items-center gap-2 select-none">
                 <div className="relative">
-                  <img 
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&auto=format&fit=crop" 
-                    alt="User" 
-                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-neutral-700 object-cover"
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&auto=format&fit=crop"
+                    alt="User"
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-neutral-700 object-cover"
                   />
                   <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#141517]"></span>
                 </div>
@@ -322,7 +322,7 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
           {/* Bento Grid Layout (Left large showcase column, right stack columns) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5">
             {/* LEFT MAIN ADVERTISING BILLBOARD COLUMN (col-span-8) */}
-            <div 
+            <div
               onClick={onExploreClick}
               className="lg:col-span-8 relative w-full aspect-[4/3] sm:aspect-[1024/558] bg-[#0c0c0e] rounded-xl sm:rounded-2xl border border-neutral-800/85 overflow-hidden group cursor-pointer select-none shadow-2xl"
             >
@@ -340,9 +340,9 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
                     }}
                   >
                     {/* Background Image */}
-                    <img 
-                      src={slide.image} 
-                      alt={slide.model} 
+                    <img
+                      src={slide.image}
+                      alt={slide.model}
                       className="w-full h-full object-cover opacity-75 group-hover:scale-[1.015] transition-transform duration-700"
                     />
 
@@ -382,11 +382,10 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
                       e.stopPropagation();
                       setActiveBannerIndex(index);
                     }}
-                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                      index === activeBannerIndex 
-                        ? 'bg-[#adc6ff] w-4' 
+                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${index === activeBannerIndex
+                        ? 'bg-[#adc6ff] w-4'
                         : 'bg-white/30 hover:bg-white/50'
-                    }`}
+                      }`}
                   ></button>
                 ))}
               </div>
@@ -394,17 +393,17 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
 
             {/* RIGHT TWIN STACK BENTO CONTAINER COLUMNS (col-span-4) */}
             <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-col gap-3 sm:gap-5">
-              
+
               {/* STACK CARD 1 - Galaxy S24 Ultra TPU Case Display */}
               <div className="relative h-[180px] sm:h-[210px] md:h-[230px] bg-[#111214] rounded-xl sm:rounded-2xl border border-neutral-800/80 overflow-hidden flex flex-col justify-end p-4 md:p-6 group select-none">
                 {/* Visual S24 Ultra TPU Case Image */}
-                <img 
-                  src="/products/separate_image_2.png" 
-                  alt="Galaxy S24 Ultra TPU Case" 
+                <img
+                  src="/products/separate_image_2.png"
+                  alt="Galaxy S24 Ultra TPU Case"
                   className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700 z-0"
                   referrerPolicy="no-referrer"
                 />
-                
+
                 {/* Vignette Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/40 to-transparent z-1" />
 
@@ -417,8 +416,8 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
                   <p className="text-neutral-450 text-[11px] font-light leading-relaxed tracking-wide line-clamp-2 max-w-xs">
                     Impact-absorbing TPU buffer ring preserving the premium titanium contours.
                   </p>
-                  
-                  <button 
+
+                  <button
                     onClick={onExploreClick}
                     className="text-[10px] font-mono tracking-widest text-[#DBE9EE] uppercase block pt-2 border-b border-neutral-700 hover:border-[#DBE9EE] w-fit transition-colors pb-0.5 cursor-pointer mt-1"
                   >
@@ -430,13 +429,13 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
               {/* STACK CARD 2 - Google Pixel 8 Pro TPU Case Display */}
               <div className="relative h-[180px] sm:h-[210px] md:h-[230px] bg-[#111214] rounded-xl sm:rounded-2xl border border-neutral-800/80 overflow-hidden flex flex-col justify-end p-4 md:p-6 group select-none">
                 {/* Visual Pixel 8 Pro TPU Case Image */}
-                <img 
-                  src="/products/separate_image_6.png" 
-                  alt="Google Pixel 8 Pro TPU Case" 
+                <img
+                  src="/products/separate_image_6.png"
+                  alt="Google Pixel 8 Pro TPU Case"
                   className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700 z-0"
                   referrerPolicy="no-referrer"
                 />
-                
+
                 {/* Vignette Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-900/40 to-transparent z-1" />
 
@@ -449,8 +448,8 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
                   <p className="text-neutral-450 text-[11px] font-light leading-relaxed tracking-wide line-clamp-2 max-w-xs">
                     Ultra-thin optical clear shell showing off the signature camera visor.
                   </p>
-                  
-                  <button 
+
+                  <button
                     onClick={onExploreClick}
                     className="text-[10px] font-mono tracking-widest text-[#DBE9EE] uppercase block pt-2 border-b border-neutral-700 hover:border-[#DBE9EE] w-fit transition-colors pb-0.5 cursor-pointer mt-1"
                   >
@@ -465,7 +464,7 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
 
           {/* LOWER BENTO SUB-FOOTER RECONSTRUCTION */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-5 mt-3 sm:mt-5">
-            
+
             {/* Lower Col 1: Extra Capsule indicator (col-span-3) */}
             <div className="md:col-span-3 bg-[#111214]/80 border border-neutral-800/80 rounded-xl p-4.5 flex flex-col justify-center select-none">
               <span className="text-[10px] font-mono tracking-[0.2em] text-neutral-500 uppercase block mb-1">DESIGN DIVISION</span>
@@ -497,8 +496,8 @@ export default function HeroSection({ onExploreClick, onStudioClick }: HeroSecti
               <p className="text-neutral-400 text-[10.5px] font-light leading-relaxed max-w-md">
                 Every product is thoughtfully designed with meticulous attention to detail, using high-quality materials and modern craftsmanship. We focus on creating elegant, durable, and beautifully crafted pieces that bring both functionality and top design.
               </p>
-              
-              <button 
+
+              <button
                 onClick={onExploreClick}
                 className="text-[9px] font-mono tracking-widest text-[#DBE9EE] uppercase block pt-0.5 border-b border-transparent hover:border-[#DBE9EE] w-fit transition-all pb-0.5 cursor-pointer"
               >

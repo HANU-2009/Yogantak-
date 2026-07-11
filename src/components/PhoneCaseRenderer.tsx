@@ -9,7 +9,7 @@ interface PhoneCaseRendererProps {
   monogramColor?: 'gold' | 'silver' | 'rose' | 'blind';
   magsafe?: boolean;
   buttonColor?: 'gold' | 'silver' | 'gunmetal' | 'matching';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'fill';
 }
 
 export default function PhoneCaseRenderer({
@@ -23,12 +23,13 @@ export default function PhoneCaseRenderer({
   size = 'md'
 }: PhoneCaseRendererProps) {
   
-  // Dimensions adaptation
+  // Dimensions adaptation — 'fill' expands to parent container
   const sizeClasses = {
     sm: 'w-32 h-64 text-[8px]',
     md: 'w-48 h-96 text-xs',
     lg: 'w-64 h-[28rem] text-sm',
-    xl: 'w-72 h-[32rem] text-base'
+    xl: 'w-72 h-[32rem] text-base',
+    fill: 'w-full h-full text-xs'
   };
 
   // Select the appropriate given product image based on the model
@@ -103,33 +104,15 @@ export default function PhoneCaseRenderer({
     >
       {/* Outer Case Wrapper with Correct Shape Border */}
       <div 
-        className={`relative w-full h-full ${frameRadius} overflow-hidden shadow-2xl transition-all duration-500`}
+        className={`relative w-full h-full ${frameRadius} flex items-center justify-center shadow-2xl transition-all duration-500 bg-transparent overflow-hidden`}
       >
         {/* Underlay Phone Case Image */}
         <img
           src={imageSrc}
           alt={`TPU Case for ${model}`}
-          className="w-full h-full object-cover transition-all duration-500"
+          className="w-full h-full object-contain transition-all duration-500"
         />
 
-        {/* Dynamic Color Tint Overlay (Mix Blend modes) */}
-        {material !== 'Ultra-Tough Polycarbonate' && (
-          <div 
-            className="absolute inset-0 mix-blend-color opacity-85 pointer-events-none transition-all duration-500"
-            style={{ backgroundColor: color.value }}
-          />
-        )}
-        {material !== 'Ultra-Tough Polycarbonate' && (
-          <div 
-            className="absolute inset-0 mix-blend-multiply opacity-35 pointer-events-none transition-all duration-500"
-            style={{ backgroundColor: color.value }}
-          />
-        )}
-
-        {/* Dynamic Texture Overlay Pattern */}
-        {material !== 'Ultra-Tough Polycarbonate' && (
-          <div className={`absolute inset-0 pointer-events-none ${overlayClass}`} />
-        )}
 
         {/* MagSafe Compass Ring */}
         {magsafe && (
