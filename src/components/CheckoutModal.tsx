@@ -21,8 +21,6 @@ export default function CheckoutModal({
   if (!isOpen) return null;
 
   const [promoCode, setPromoCode] = useState('');
-  const [showMockRazorpay, setShowMockRazorpay] = useState(false);
-  const [mockRazorpayOrderData, setMockRazorpayOrderData] = useState<any>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -178,103 +176,6 @@ export default function CheckoutModal({
     }
   };
 
-  const handleMockPaymentSuccess = async () => {
-    setShowMockRazorpay(false);
-    setStep('authorizing');
-    setAuthLogs(prev => [
-      ...prev,
-      '[SECURE-PORTAL] - Payment successfully completed at Mock Gateway.',
-      '[SECURE-PORTAL] - Verifying cryptographic transaction signatures...'
-    ]);
-
-    try {
-      const response = {
-        razorpay_order_id: mockRazorpayOrderData.id,
-        razorpay_payment_id: `pay_mock_${Math.random().toString(36).substring(2, 11)}`,
-        razorpay_signature: 'mock_signature'
-      };
-
-      // Verify payment on our backend
-      const verifyRes = await fetch('/api/payments/razorpay/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature
-        })
-      });
-
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || !verifyData.verified) {
-        throw new Error(verifyData.error || 'Cryptographic verification failed');
-      }
-
-      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Signature verified. Hashing order manifest in database...']);
-
-      // Finalize order in our database
-      const orderFinalRes = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user ? user.id : null,
-          email: shipping.email,
-          items: cart,
-          subtotal,
-          tax,
-          total,
-          shippingName: shipping.fullName,
-          shippingAddress: shipping.addressLine1 + (shipping.addressLine2 ? `, ${shipping.addressLine2}` : ''),
-          shippingCity: shipping.city,
-          shippingState: shipping.state,
-          shippingZip: shipping.postalCode,
-          shippingCountry: shipping.country,
-          couponCode: appliedCoupon ? appliedCoupon.code : null,
-          paymentId: response.razorpay_payment_id
-        })
-      });
-
-      const orderFinalData = await orderFinalRes.json();
-      if (!orderFinalRes.ok) {
-        throw new Error(orderFinalData.error || 'Failed to place order in database');
-      }
-
-      const newOrder: Order = {
-        id: orderFinalData.orderId,
-        date: new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        items: [...cart],
-        shipping,
-        subtotal,
-        shippingCost,
-        tax,
-        total,
-        paymentMethod: `Razorpay UPI/Card/Wallet (ID: ${response.razorpay_payment_id.slice(-6)}) (SIMULATED)`,
-        status: 'processing'
-      };
-
-      setCompletedOrder(newOrder);
-      setStep('success');
-      onOrderConfirmed(newOrder);
-
-    } catch (verifyErr: any) {
-      console.error('Payment verification / checkout finalization error:', verifyErr);
-      setCheckoutError(verifyErr.message || 'Payment verification failed');
-      setStep('payment');
-    }
-  };
-
-  const handleMockPaymentDismiss = () => {
-    setShowMockRazorpay(false);
-    setCheckoutError('Payment cancelled. Please try again.');
-    setStep('payment');
-  };
-
   // Launches Razorpay Web Standard Checkout
   const handleRazorpayCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,42 +201,16 @@ export default function CheckoutModal({
 
       const orderData = await orderRes.json();
 
-      // If unauthorized (401), we can display the simulation overlay as fallback
-      if (orderRes.status === 401) {
-        setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Razorpay credentials unauthorized (401).']);
-        const mockOrder = {
-          id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
-          order_id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
-          amount: amountPaise,
-          currency: 'INR',
-          entity: 'order',
-          isMock: true
-        };
-        setMockRazorpayOrderData(mockOrder);
-        setShowMockRazorpay(true);
-        setStep('payment');
-        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Razorpay auth failure. Loading simulation overlay...']);
-        return;
-      }
-
       if (!orderRes.ok) {
-        throw new Error(orderData.error || 'Failed to initialize gateway order');
+        throw new Error(orderData.error || 'Payment gateway unavailable. Please try again or contact support.');
       }
 
-      // Map order_id to id for compatibility with existing UI
+      // Map order_id to id for compatibility
       if (orderData.order_id && !orderData.id) {
         orderData.id = orderData.order_id;
       }
 
-      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Standard Checkout options handshake complete.']);
-
-      if (orderData.isMock) {
-        setMockRazorpayOrderData(orderData);
-        setShowMockRazorpay(true);
-        setStep('payment');
-        setAuthLogs(prev => [...prev, '[MOCK-GATEWAY] - Loading simulation overlay...']);
-        return;
-      }
+      setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Razorpay order reference confirmed. Opening payment gateway...']);
 
       const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
       if (!keyId) {
@@ -774,7 +649,7 @@ export default function CheckoutModal({
               <div className="h-96 flex flex-col items-center justify-center space-y-6">
                 <Loader2 className="w-12 h-12 text-black animate-spin" />
                 <div className="text-center space-y-1">
-                  <h4 className="font-sans text-lg font-bold text-black uppercase">Simulating Vault Clearances</h4>
+                  <h4 className="font-sans text-lg font-bold text-black uppercase">Processing Payment</h4>
                   <p className="text-xs text-gray-400 font-mono uppercase">Verifying banking handshakes...</p>
                 </div>
 
