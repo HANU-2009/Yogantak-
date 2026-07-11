@@ -19,6 +19,15 @@ export default function ScrollVideoHeader({ onSkip }: ScrollVideoHeaderProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // Explicitly trigger play on mount to satisfy strict browser autoplay policies
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch((err) => {
+        console.log('Autoplay was prevented by browser policy, will play on user interaction:', err);
+      });
+    }
+  }, []);
+
   // Track window scroll for subtle parallax/fade out effects
   useEffect(() => {
     const handleScroll = () => {
