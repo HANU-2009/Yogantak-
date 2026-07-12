@@ -3,7 +3,20 @@ import path from 'path';
 import fs from 'fs';
 
 // Resolve database path
-const dbPath = path.resolve(process.cwd(), 'data.db');
+let dbPath = path.resolve(process.cwd(), 'data.db');
+
+if (process.env.VERCEL) {
+  const tmpDbPath = path.join('/tmp', 'data.db');
+  if (!fs.existsSync(tmpDbPath)) {
+    try {
+      fs.copyFileSync(dbPath, tmpDbPath);
+      console.log('Successfully copied data.db to /tmp/data.db');
+    } catch (e) {
+      console.error('Failed to copy database to /tmp/data.db:', e);
+    }
+  }
+  dbPath = tmpDbPath;
+}
 
 export const db = new DatabaseSync(dbPath);
 
