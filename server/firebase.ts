@@ -1,33 +1,35 @@
-import { initializeApp, getApps, getApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import type { App } from 'firebase-admin/app';
+// Export adminAuth variable that will be initialized dynamically if credentials are found
+export let adminAuth: any = null;
 
-// Initialize Firebase Admin SDK
-let firebaseApp: App | undefined;
+async function initializeFirebaseAdmin() {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    : undefined;
 
-try {
-  if (!getApps().length) {
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY
-      ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-      : undefined;
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+    try {
+      // Dynamic imports prevent Node.js from loading firebase-admin at startup in read-only/serverless environments where it is not needed.
+      const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+      const { getAuth } = await import('firebase-admin/auth');
 
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
-      firebaseApp = initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-      });
-      console.log('Firebase Admin SDK initialized successfully.');
-    } else {
-      console.warn('Firebase Admin SDK missing credentials. Authentication via Firebase will not work until .env is populated.');
+      if (!getApps().length) {
+        const firebaseApp = initializeApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: privateKey,
+          }),
+        });
+        adminAuth = getAuth(firebaseApp);
+        console.log('Firebase Admin SDK initialized successfully.');
+      }
+    } catch (error) {
+      console.error('Failed to initialize Firebase Admin SDK dynamically:', error);
     }
   } else {
-    firebaseApp = getApp();
+    console.warn('Firebase Admin SDK missing credentials. Authentication via Firebase will not work until .env is populated.');
   }
-} catch (error) {
-  console.error('Failed to initialize Firebase Admin SDK:', error);
 }
 
-export const adminAuth = firebaseApp ? getAuth(firebaseApp) : null;
+// Start initialization immediately
+initializeFirebaseAdmin();
