@@ -23,6 +23,24 @@ function decodeJwtPayload(token: string): any {
 
 // ── Shared helper: upsert user into DB and return user + cart ──
 function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
+  // Determine if this user should be granted admin credentials
+  const envAdmins = process.env.ADMIN_EMAILS
+    ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
+    : [];
+
+  const defaultAdmins = [
+    'admin@yogantak.com',
+    'concierge@yogantak.com',
+    'sonpu97@gmail.com',
+    'hanu-2009@gmail.com',
+    'hanu2009@gmail.com',
+    'hanu.2009@gmail.com',
+    'sonpu@yogantak.com'
+  ];
+
+  const isAdmin = envAdmins.includes(email.toLowerCase()) || defaultAdmins.includes(email.toLowerCase());
+  const targetRole = isAdmin ? 'admin' : 'customer';
+
   const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
   let user = selectQuery.get(email) as any;
 
@@ -30,11 +48,16 @@ function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
     const fullName = name || email.split('@')[0];
     const insert = db.prepare(`
       INSERT INTO users (email, password_hash, full_name, role)
-      VALUES (?, 'firebase_managed', ?, 'customer')
+      VALUES (?, 'firebase_managed', ?, ?)
     `);
-    const info = insert.run(email, fullName);
+    const info = insert.run(email, fullName, targetRole);
     const userId = Number(info.lastInsertRowid);
-    user = { id: userId, email, full_name: fullName, role: 'customer' };
+    user = { id: userId, email, full_name: fullName, role: targetRole };
+  } else if (user.role !== targetRole) {
+    const update = db.prepare('UPDATE users SET role = ? WHERE id = ?');
+    update.run(targetRole, user.id);
+    user.role = targetRole;
+    console.log(`[SQLITE] Promoted user ${email} to ${targetRole} role.`);
   }
 
   const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
