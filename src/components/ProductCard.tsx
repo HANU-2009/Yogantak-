@@ -23,10 +23,11 @@ export default function ProductCard({
   onQuickAdd,
   layout = 'grid'
 }: ProductCardProps) {
-  // Local state for active selections
-  const [activeModel, setActiveModel] = useState<PhoneModel>(product.models[0]);
-  const [activeColor, setActiveColor] = useState<CaseColor>(product.colors[0]);
-  const [activeMaterial, setActiveMaterial] = useState<CaseMaterial>(product.materials[0]);
+  // Local state for active selections — safe defaults for flat product schema
+  const DEFAULT_COLOR: CaseColor = { id: 'default', name: 'Default', value: '#111827', bgClass: 'bg-gray-900', textContrast: 'light' };
+  const [activeModel, setActiveModel] = useState<PhoneModel>((product.models?.[0] as PhoneModel) || 'iPhone 15 Pro Max');
+  const [activeColor, setActiveColor] = useState<CaseColor>(product.colors?.[0] || DEFAULT_COLOR);
+  const [activeMaterial, setActiveMaterial] = useState<CaseMaterial>((product.materials?.[0] as CaseMaterial) || 'Premium Pebble Leather');
   const [isHovered, setIsHovered] = useState(false);
 
   const handleHeartClick = (e: React.MouseEvent) => {
@@ -73,7 +74,7 @@ export default function ProductCard({
     if (product.id === 'stealth-aramid') {
       return { current: 3999, retail: 4999 };
     }
-    return { current: product.basePrice, retail: null };
+    return { current: product.price ?? product.basePrice ?? 0, retail: null };
   };
 
   const badge = getBadge();
@@ -87,15 +88,24 @@ export default function ProductCard({
       >
         {/* Left: Phone Image Area */}
         <div className="w-40 bg-[#202024]/40 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden shrink-0 aspect-[4/5]">
-          <div className="transform scale-[0.65] transition-transform duration-500 group-hover:scale-[0.68] w-full h-full">
-            <PhoneCaseRenderer
-              model={activeModel}
-              material={activeMaterial}
-              color={activeColor}
-              size="fill"
-              magsafe={product.magsafe}
+          {product.image && product.image !== 'custom' ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover rounded-xl"
+              onError={e => (e.currentTarget.style.display = 'none')}
             />
-          </div>
+          ) : (
+            <div className="transform scale-[0.65] transition-transform duration-500 group-hover:scale-[0.68] w-full h-full">
+              <PhoneCaseRenderer
+                model={activeModel}
+                material={activeMaterial}
+                color={activeColor}
+                size="fill"
+                magsafe={product.magsafe}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right: Info Area */}
@@ -206,15 +216,24 @@ export default function ProductCard({
           />
         </button>
 
-        {/* Phone Case Render */}
+        {/* Product Image or Case Renderer */}
         <div className="w-full h-full flex items-center justify-center">
-          <PhoneCaseRenderer
-            model={activeModel}
-            material={activeMaterial}
-            color={activeColor}
-            size="fill"
-            magsafe={product.magsafe}
-          />
+          {product.image && product.image !== 'custom' ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover rounded-xl"
+              onError={e => (e.currentTarget.style.display = 'none')}
+            />
+          ) : (
+            <PhoneCaseRenderer
+              model={activeModel}
+              material={activeMaterial}
+              color={activeColor}
+              size="fill"
+              magsafe={product.magsafe}
+            />
+          )}
         </div>
 
         {/* Dynamic Premium Hover Buttons Overlay */}
@@ -304,8 +323,8 @@ export default function ProductCard({
           
           <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-450">
             <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
-            <span className="text-neutral-200">{product.rating}</span>
-            <span className="text-neutral-550 font-medium font-sans">({product.reviewsCount})</span>
+            <span className="text-neutral-200">{(product.rating ?? 5).toFixed(1)}</span>
+            <span className="text-neutral-550 font-medium font-sans">({product.reviewsCount ?? 0})</span>
           </div>
         </div>
 

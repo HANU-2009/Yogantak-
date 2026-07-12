@@ -3,11 +3,14 @@ dotenv.config();
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { db } from './db.js';
+import { db, initSchema } from './db.js';
 import { adminAuth } from './firebase.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import https from 'https';
+
+// Initialize DB schema on startup
+initSchema();
 
 // ── Helper: decode a Firebase JWT payload without verifying signature (dev-mode fallback) ──
 function decodeJwtPayload(token: string): any {
@@ -64,8 +67,40 @@ function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
   };
 }
 
+// ── Helper: format a product row from DB into the API response shape ──
+function formatProduct(product: any) {
+  if (!product) return null;
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description || '',
+    price: product.price,
+    basePrice: product.price,        // backward compat alias
+    stock: product.stock ?? 0,
+    category: product.category || 'general',
+    rating: product.rating ?? 5.0,
+    reviewsCount: product.reviews_count ?? 0,
+    image: product.image_data || product.image_url || '',
+    image_data: product.image_data || '',
+    image_url: product.image_url || '',
+    // Legacy empty arrays so old cart/checkout components don't crash
+    models: [],
+    materials: [],
+    colors: [],
+    tags: [],
+    features: [],
+    magsafe: false,
+    bestseller: false,
+    ecoFriendly: false,
+    createdAt: product.created_at
+  };
+}
+
 const app = express();
-app.use(express.json());
+
+// Increase body size limit to 20MB to support base64 image uploads
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Enable CORS
 app.use((req, res, next) => {
@@ -84,7 +119,7 @@ app.use((req, res, next) => {
   const ip = req.ip || 'unknown';
   const now = Date.now();
   const limitTime = 60 * 1000; // 1 minute
-  const maxRequests = 100;
+  const maxRequests = 200; // increased for image uploads
 
   let tracking = ipRequestCounts.get(ip);
   if (!tracking || now > tracking.resetTime) {
@@ -144,8 +179,15 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
     const user = userQuery.get(email) as any;
 
     if (!user) {
-      res.status(403).json({ error: 'User not synced in local database' });
-      return;
+      // Auto-sync unknown user on token validation
+      const { user: syncedUser } = syncUserToDB(email, '');
+      req.user = {
+        id: syncedUser.id,
+        email: syncedUser.email,
+        role: syncedUser.role,
+        fullName: syncedUser.fullName
+      };
+      return next();
     }
 
     req.user = {
@@ -192,7 +234,6 @@ app.post('/api/auth/sync', async (req, res) => {
       name = decodedToken.name;
     } else {
       // Dev-mode fallback: decode JWT payload without signature verification
-      // Allows local testing when Firebase Admin credentials are not yet configured
       console.warn('[DEV MODE] Firebase Admin SDK not available — using unverified JWT decode for /api/auth/sync');
       const payload = decodeJwtPayload(token);
       if (!payload) {
@@ -360,72 +401,26 @@ app.post('/api/auth/otp/verify', (req, res) => {
 
 
 // ==========================================
-// 2. PRODUCT CATALOG APIS
+// 2. PRODUCT CATALOG APIS (FLAT SCHEMA)
 // ==========================================
 
+// GET /api/products — Public product catalog
 app.get('/api/products', (req, res) => {
   try {
-    const productsQuery = db.prepare('SELECT * FROM products');
-    const products = productsQuery.all() as any[];
-
-    const result = products.map(product => {
-      // Fetch models
-      const models = db.prepare('SELECT model FROM product_models WHERE product_id = ?').all(product.id) as any[];
-      // Fetch materials
-      const materials = db.prepare('SELECT material FROM product_materials WHERE product_id = ?').all(product.id) as any[];
-      // Fetch colors
-      const colors = db.prepare('SELECT color_id as id, color_name as name, color_value as value, bg_class as bgClass, text_contrast as textContrast FROM product_colors WHERE product_id = ?').all(product.id) as any[];
-      // Fetch tags
-      const tags = db.prepare('SELECT tag FROM product_tags WHERE product_id = ?').all(product.id) as any[];
-      // Fetch features
-      const features = db.prepare('SELECT feature FROM product_features WHERE product_id = ?').all(product.id) as any[];
-
-      return {
-        ...product,
-        magsafe: !!product.magsafe,
-        bestseller: !!product.bestseller,
-        ecoFriendly: !!product.eco_friendly,
-        basePrice: product.base_price,
-        reviewsCount: product.reviews_count,
-        models: models.map(m => m.model),
-        materials: materials.map(m => m.material),
-        colors,
-        tags: tags.map(t => t.tag),
-        features: features.map(f => f.feature)
-      };
-    });
-
-    res.json(result);
+    const products = db.prepare('SELECT * FROM products ORDER BY created_at DESC').all() as any[];
+    res.json(products.map(formatProduct));
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch product catalog data' });
+    res.status(500).json({ error: 'Failed to fetch product catalog' });
   }
 });
 
+// GET /api/products/:id — Single product detail
 app.get('/api/products/:id', (req, res) => {
   const { id } = req.params;
   try {
     const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
     if (!product) return res.status(404).json({ error: 'Product not found' });
-
-    const models = db.prepare('SELECT model FROM product_models WHERE product_id = ?').all(id) as any[];
-    const materials = db.prepare('SELECT material FROM product_materials WHERE product_id = ?').all(id) as any[];
-    const colors = db.prepare('SELECT color_id as id, color_name as name, color_value as value, bg_class as bgClass, text_contrast as textContrast FROM product_colors WHERE product_id = ?').all(id) as any[];
-    const tags = db.prepare('SELECT tag FROM product_tags WHERE product_id = ?').all(id) as any[];
-    const features = db.prepare('SELECT feature FROM product_features WHERE product_id = ?').all(id) as any[];
-
-    res.json({
-      ...product,
-      magsafe: !!product.magsafe,
-      bestseller: !!product.bestseller,
-      ecoFriendly: !!product.eco_friendly,
-      basePrice: product.base_price,
-      reviewsCount: product.reviews_count,
-      models: models.map(m => m.model),
-      materials: materials.map(m => m.material),
-      colors,
-      tags: tags.map(t => t.tag),
-      features: features.map(f => f.feature)
-    });
+    res.json(formatProduct(product));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch product details' });
   }
@@ -559,7 +554,7 @@ app.post('/api/coupons/apply', (req, res) => {
   }
 
   if (cartTotal < coupon.min_purchase) {
-    return res.status(400).json({ error: `Voucher requires a minimum purchase of $${coupon.min_purchase}` });
+    return res.status(400).json({ error: `Voucher requires a minimum purchase of ₹${coupon.min_purchase}` });
   }
 
   let discount = 0;
@@ -582,62 +577,36 @@ app.post('/api/coupons/apply', (req, res) => {
 // ==========================================
 
 app.post('/api/orders', (req, res) => {
-  const { 
-    userId, email, items, subtotal, tax, total, 
+  const {
+    userId, email, items, subtotal, tax, total,
     shippingName, shippingAddress, shippingCity, shippingState, shippingZip, shippingCountry,
-    couponCode, paymentId 
+    couponCode, paymentId
   } = req.body;
 
   if (!email || !items || !Array.isArray(items) || items.length === 0 || !total) {
-    return res.status(400).json({ error: 'Order validation failed: missing coordinates' });
+    return res.status(400).json({ error: 'Order validation failed: missing required fields' });
   }
 
   try {
-    // Inventory Stock Verification & Deductions
-    const checkStock = db.prepare(`
-      SELECT stock, sku FROM inventory 
-      WHERE product_id = ? AND model = ? AND material = ? AND color_id = ?
-    `);
-
-    const updateStock = db.prepare(`
-      UPDATE inventory SET stock = stock - ? 
-      WHERE sku = ?
-    `);
-
-    // Verify all items are in stock first
+    // Stock verification for each item
     for (const item of items) {
-      if (item.product.id.startsWith('bespoke-') || item.product.image === 'custom') {
-        continue; // bespoke cases don't subtract from static mold stock
-      }
-      const match = checkStock.get(
-        item.product.id,
-        item.selectedModel,
-        item.selectedMaterial,
-        item.selectedColor.id
-      ) as any;
-
-      if (!match || match.stock < item.quantity) {
-        return res.status(400).json({ 
-          error: `Insufficient inventory stock for ${item.product.name} in ${item.selectedColor.name} (${item.selectedModel})` 
+      if (item.product?.id?.startsWith('bespoke-')) continue;
+      const prod = db.prepare('SELECT stock FROM products WHERE id = ?').get(item.product?.id) as any;
+      if (prod && prod.stock < item.quantity) {
+        return res.status(400).json({
+          error: `Insufficient stock for "${item.product?.name}" (only ${prod.stock} left)`
         });
       }
     }
 
-    // Deduct stock levels
+    // Deduct stock
     for (const item of items) {
-      if (item.product.id.startsWith('bespoke-') || item.product.image === 'custom') {
-        continue;
-      }
-      const match = checkStock.get(
-        item.product.id,
-        item.selectedModel,
-        item.selectedMaterial,
-        item.selectedColor.id
-      ) as any;
-      updateStock.run(item.quantity, match.sku);
+      if (item.product?.id?.startsWith('bespoke-')) continue;
+      db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?')
+        .run(item.quantity, item.product?.id);
     }
 
-    // Create unique Order ID (e.g. YGT-12345-6789)
+    // Create unique Order ID
     const orderId = `YGT-${Math.floor(10000 + Math.random() * 90000)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const insertOrder = db.prepare(`
@@ -663,18 +632,16 @@ app.post('/api/orders', (req, res) => {
     );
 
     const insertOrderItem = db.prepare(`
-      INSERT INTO order_items (order_id, product_id, quantity, selected_model, selected_material, selected_color_id, price, custom_config)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO order_items (order_id, product_id, product_name, quantity, price, custom_config)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     for (const item of items) {
       insertOrderItem.run(
         orderId,
-        item.product.id,
+        item.product?.id || 'unknown',
+        item.product?.name || 'Product',
         item.quantity,
-        item.selectedModel,
-        item.selectedMaterial,
-        item.selectedColor.id,
         item.price,
         item.customConfig ? JSON.stringify(item.customConfig) : null
       );
@@ -692,40 +659,32 @@ app.post('/api/orders', (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to place order transaction' });
+    res.status(500).json({ error: 'Failed to place order' });
   }
 });
 
 app.get('/api/orders/history', authenticateToken, (req: AuthRequest, res) => {
   try {
     const orders = db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC').all(req.user!.id) as any[];
-    
+
     const result = orders.map(order => {
       const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id) as any[];
       const enrichedItems = items.map(item => {
         const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id) as any;
-        
-        // Handle bespoke items
-        let finalProduct = product;
-        if (item.product_id.startsWith('bespoke-')) {
-          finalProduct = {
-            id: item.product_id,
-            name: 'Bespoke Engraved Case Studio',
-            image: 'custom',
-            basePrice: item.price
-          };
-        }
-
-        // Color details fetch
-        const color = db.prepare('SELECT color_id as id, color_name as name, color_value as value, bg_class as bgClass, text_contrast as textContrast FROM product_colors WHERE product_id = ? AND color_id = ?').get(item.product_id, item.selected_color_id) || { id: item.selected_color_id, name: 'Default Color', bgClass: 'bg-black' };
+        let finalProduct = product ? formatProduct(product) : {
+          id: item.product_id,
+          name: item.product_name || 'Product',
+          image: '',
+          price: item.price
+        };
 
         return {
           id: item.id,
           product: finalProduct,
           quantity: item.quantity,
-          selectedModel: item.selected_model,
-          selectedMaterial: item.selected_material,
-          selectedColor: color,
+          selectedModel: item.selected_model || null,
+          selectedMaterial: item.selected_material || null,
+          selectedColor: { id: 'default', name: 'Default', bgClass: 'bg-gray-900' },
           price: item.price,
           customConfig: item.custom_config ? JSON.parse(item.custom_config) : null
         };
@@ -760,8 +719,8 @@ app.post('/api/orders/:id/cancel', authenticateToken, (req: AuthRequest, res) =>
   const { id } = req.params;
   try {
     const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id) as any;
-    if (!order) return res.status(404).json({ error: 'Order manifest not found' });
-    
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
     // Verify ownership
     if (order.user_id !== req.user!.id && req.user!.role !== 'admin') {
       return res.status(403).json({ error: 'Permission denied' });
@@ -771,36 +730,30 @@ app.post('/api/orders/:id/cancel', authenticateToken, (req: AuthRequest, res) =>
       return res.status(400).json({ error: 'Order is already cancelled' });
     }
 
-    // Cancel order in DB
     db.prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?").run(id);
 
-    // Restore stock levels
+    // Restore stock
     const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(id) as any[];
-    const restoreStock = db.prepare(`
-      UPDATE inventory SET stock = stock + ? 
-      WHERE product_id = ? AND model = ? AND material = ? AND color_id = ?
-    `);
-
     for (const item of items) {
-      if (item.product_id.startsWith('bespoke-')) continue;
-      restoreStock.run(
-        item.quantity,
-        item.product_id,
-        item.selected_model,
-        item.selected_material,
-        item.selected_color_id
-      );
+      if (item.product_id?.startsWith('bespoke-')) continue;
+      db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
+        .run(item.quantity, item.product_id);
     }
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to abort order delivery' });
+    res.status(500).json({ error: 'Failed to cancel order' });
   }
 });
 
 // ==========================================
-// 6. RAZORPAY PAYMENT MOCKS & LOGS
+// 6. RAZORPAY PAYMENT GATEWAY
 // ==========================================
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+});
 
 app.post('/api/payments/razorpay/order', async (req, res) => {
   try {
@@ -810,16 +763,15 @@ app.post('/api/payments/razorpay/order', async (req, res) => {
     }
     const amountPaise = Number(amount);
     if (isNaN(amountPaise) || amountPaise < 100) {
-      return res.status(400).json({ error: 'Amount must be at least 100 paise (1 INR)' });
+      return res.status(400).json({ error: 'Amount must be at least 100 paise (₹1)' });
     }
 
-    const hasKeys = process.env.RAZORPAY_KEY_ID && 
-                    process.env.RAZORPAY_KEY_SECRET && 
+    const hasKeys = process.env.RAZORPAY_KEY_ID &&
+                    process.env.RAZORPAY_KEY_SECRET &&
                     process.env.RAZORPAY_KEY_ID !== 'YOUR_KEY_ID' &&
                     process.env.RAZORPAY_KEY_SECRET !== 'YOUR_KEY_SECRET';
 
     if (!hasKeys) {
-      console.log('[RAZORPAY] Missing or placeholder keys. Falling back to mock order.');
       return res.json({
         id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
         order_id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
@@ -830,171 +782,97 @@ app.post('/api/payments/razorpay/order', async (req, res) => {
       });
     }
 
-    try {
-      const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID!,
-        key_secret: process.env.RAZORPAY_KEY_SECRET!
-      });
+    const order = await razorpay.orders.create({
+      amount: amountPaise,
+      currency: currency || 'INR',
+      receipt: receipt || `rcpt_${Date.now()}`
+    });
 
-      const order = await razorpay.orders.create({
-        amount: amountPaise,
-        currency: currency || 'INR',
-        receipt: receipt || `rcpt_${Date.now()}`
-      });
+    res.json({
+      id: (order as any).id,
+      order_id: (order as any).id,
+      amount: (order as any).amount,
+      currency: (order as any).currency,
+      entity: (order as any).entity,
+      isMock: false
+    });
 
-      res.json({
-        id: order.id,
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        entity: order.entity,
-        isMock: false
-      });
-    } catch (err: any) {
-      if (err.statusCode === 401 || err.message?.includes('auth') || err.message?.includes('API key')) {
-        console.warn('[RAZORPAY] Authentication failed (401). Falling back to mock order.');
-        return res.json({
-          id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
-          order_id: `order_mock_${Math.random().toString(36).substring(2, 11)}`,
-          amount: amountPaise,
-          currency: currency || 'INR',
-          entity: 'order',
-          isMock: true
-        });
-      }
-      throw err;
-    }
   } catch (err: any) {
     console.error('Razorpay order creation failure:', err);
     res.status(500).json({ error: err.message || 'Razorpay order creation failed' });
   }
 });
 
-app.post('/api/payments/razorpay/verify', (req, res) => {
+app.post('/api/payments/razorpay/verify', (req: Request, res: Response) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-  
+
+  if (razorpay_signature === 'mock_signature') {
+    return res.json({ verified: true, message: 'Mock payment signature accepted' });
+  }
+
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    return res.status(400).json({ error: 'Signature coordinates missing' });
+    return res.status(400).json({ error: 'Missing required payment fields' });
   }
 
-  if (razorpay_order_id.startsWith('order_mock_') || razorpay_signature === 'mock_signature') {
-    return res.json({
-      verified: true,
-      message: 'Mock Payment verification completed. Signature verified.'
-    });
-  }
+  try {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto.createHmac('sha256', keySecret).update(body).digest('hex');
 
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!secret) {
-    return res.status(500).json({ error: 'Razorpay key secret not configured on server' });
-  }
-
-  const body = razorpay_order_id + '|' + razorpay_payment_id;
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(body.toString())
-    .digest('hex');
-
-  const verified = expectedSignature === razorpay_signature;
-
-  if (verified) {
-    res.json({
-      verified: true,
-      message: 'Payment verification checks completed. Signature verified.'
-    });
-  } else {
-    res.status(400).json({
-      verified: false,
-      error: 'Invalid payment signature. Potential tampering detected.'
-    });
+    if (expectedSignature === razorpay_signature) {
+      res.json({ verified: true });
+    } else {
+      res.status(400).json({ verified: false, error: 'Invalid payment signature' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: 'Signature verification error' });
   }
 });
 
-// ==========================================
-// 6b. STANDARD RAZORPAY API INTEGRATION
-// ==========================================
-
+// Alias for CheckoutModal compatibility
 app.post('/api/create-order', async (req: Request, res: Response) => {
+  const { amount, currency = 'INR', receipt } = req.body;
+  if (!amount || typeof amount !== 'number' || amount < 100) {
+    return res.status(400).json({ error: 'Amount must be a number >= 100 paise (₹1)' });
+  }
+
   try {
-    const { amount, currency, receipt } = req.body;
-    if (amount === undefined || amount === null) {
-      return res.status(400).json({ error: 'Amount is required' });
-    }
-    const amountPaise = Number(amount);
-    if (isNaN(amountPaise) || amountPaise < 100) {
-      return res.status(400).json({ error: 'Amount must be at least 100 paise' });
-    }
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount),
+      currency,
+      receipt: receipt || `rcpt_${Date.now()}`,
+    } as any);
 
-    const key_id = process.env.RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-
-    if (!key_id || !key_secret || key_id === 'YOUR_KEY_ID' || key_secret === 'YOUR_KEY_SECRET') {
-      return res.status(401).json({ error: 'Razorpay API credentials not configured' });
-    }
-
-    const razorpay = new Razorpay({
-      key_id,
-      key_secret
+    res.json({
+      order_id: (order as any).id,
+      id: (order as any).id,
+      amount: (order as any).amount,
+      currency: (order as any).currency
     });
-
-    try {
-      const order = await razorpay.orders.create({
-        amount: amountPaise,
-        currency: currency || 'INR',
-        receipt: receipt || `rcpt_${Date.now()}`
-      });
-
-      return res.json({
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency
-      });
-    } catch (razorpayError: any) {
-      console.error('Razorpay SDK Order creation failed:', razorpayError);
-      const statusCode = razorpayError.statusCode || 500;
-      if (statusCode === 401 || razorpayError.message?.toLowerCase().includes('auth') || razorpayError.message?.toLowerCase().includes('key')) {
-        return res.status(401).json({ error: 'Razorpay authentication failed: Invalid credentials.' });
-      }
-      return res.status(500).json({ error: razorpayError.message || 'Razorpay order creation failed' });
-    }
-  } catch (error: any) {
-    console.error('Create order exception:', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+  } catch (err: any) {
+    console.error('[RAZORPAY] Create order failed:', err);
+    res.status(500).json({ error: err?.error?.description || err?.message || 'Failed to create Razorpay order' });
   }
 });
 
 app.post('/api/verify-payment', (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ error: 'Missing required payment verification fields' });
+  }
+
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing required payment verification fields' });
-    }
-
-    const secret = process.env.RAZORPAY_KEY_SECRET;
-    if (!secret) {
-      return res.status(500).json({ error: 'Razorpay key secret not configured on server' });
-    }
-
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
     const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(body.toString())
-      .digest('hex');
+    const expectedSignature = crypto.createHmac('sha256', keySecret).update(body.toString()).digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      return res.json({
-        verified: true,
-        message: 'Payment verified successfully'
-      });
+      return res.json({ verified: true, message: 'Payment verified successfully' });
     } else {
-      return res.status(400).json({
-        verified: false,
-        error: 'Invalid payment signature. Payment verification failed.'
-      });
+      return res.status(400).json({ verified: false, error: 'Invalid payment signature' });
     }
   } catch (error: any) {
-    console.error('Verify payment exception:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -1003,14 +881,14 @@ app.post('/api/verify-payment', (req: Request, res: Response) => {
 // 7. ADMIN DASHBOARD APIS
 // ==========================================
 
+// GET /api/admin/dashboard — Stats overview
 app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
   try {
     const totalSales = db.prepare("SELECT SUM(total) as sum FROM orders WHERE status != 'cancelled'").get() as any;
     const totalOrders = db.prepare("SELECT COUNT(id) as count FROM orders").get() as any;
     const totalCustomers = db.prepare("SELECT COUNT(id) as count FROM users WHERE role = 'customer'").get() as any;
-    const lowStockItems = db.prepare("SELECT COUNT(sku) as count FROM inventory WHERE stock <= low_stock_threshold").get() as any;
+    const lowStockItems = db.prepare("SELECT COUNT(id) as count FROM products WHERE stock <= 5").get() as any;
 
-    // Monthly revenue simulation
     const salesHistory = db.prepare(`
       SELECT DATE(created_at) as date, SUM(total) as amount, COUNT(id) as count
       FROM orders
@@ -1020,12 +898,11 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
       LIMIT 7
     `).all() as any[];
 
-    // Low stock lists
     const lowStockList = db.prepare(`
-      SELECT i.*, p.name as product_name
-      FROM inventory i
-      JOIN products p ON i.product_id = p.id
-      WHERE i.stock <= i.low_stock_threshold
+      SELECT id, name, stock, price, image_url, image_data
+      FROM products
+      WHERE stock <= 5
+      ORDER BY stock ASC
       LIMIT 10
     `).all() as any[];
 
@@ -1037,61 +914,127 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
         lowStockAlerts: lowStockItems.count || 0
       },
       salesHistory,
-      lowStockList
+      lowStockList: lowStockList.map(p => ({
+        ...p,
+        image: p.image_data || p.image_url || ''
+      }))
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to generate metrics dossier' });
+    res.status(500).json({ error: 'Failed to generate dashboard metrics' });
   }
 });
 
-app.get('/api/admin/inventory', authenticateToken, requireAdmin, (req, res) => {
+// GET /api/admin/products — Admin full product list with stock
+app.get('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
   try {
-    const list = db.prepare(`
-      SELECT i.*, p.name as product_name, p.base_price, p.description 
-      FROM inventory i
-      JOIN products p ON i.product_id = p.id
-      ORDER BY i.stock ASC
-    `).all();
-    res.json(list);
+    const products = db.prepare('SELECT * FROM products ORDER BY created_at DESC').all() as any[];
+    res.json(products.map(formatProduct));
   } catch (err) {
-    res.status(500).json({ error: 'Failed to retrieve stock list' });
+    res.status(500).json({ error: 'Failed to retrieve product list' });
   }
 });
 
+// POST /api/admin/products — Admin adds a new product (with image upload)
+app.post('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
+  const { name, description, price, stock, category, image_data, image_url } = req.body;
+
+  if (!name || price === undefined || price < 0) {
+    return res.status(400).json({ error: 'Product name and price are required' });
+  }
+
+  try {
+    const id = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+    db.prepare(`
+      INSERT INTO products (id, name, description, price, stock, category, image_data, image_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      name.trim(),
+      description || '',
+      Number(price),
+      Number(stock) || 0,
+      category || 'general',
+      image_data || '',
+      image_url || ''
+    );
+
+    const created = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    res.status(201).json({ success: true, product: formatProduct(created) });
+  } catch (err) {
+    console.error('Create product error:', err);
+    res.status(500).json({ error: 'Failed to create product' });
+  }
+});
+
+// PUT /api/admin/products/:id — Admin updates product details (including image)
 app.put('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { name, description, base_price } = req.body;
+  const { name, description, price, category, image_data, image_url } = req.body;
 
-  if (!name || base_price === undefined || base_price < 0) {
-    return res.status(400).json({ error: 'Name and base price are required and must be valid' });
+  if (!name || price === undefined || Number(price) < 0) {
+    return res.status(400).json({ error: 'Name and price are required' });
   }
 
   try {
-    const update = db.prepare('UPDATE products SET name = ?, description = ?, base_price = ? WHERE id = ?');
-    update.run(name, description || '', Number(base_price), id);
-    res.json({ success: true });
+    const fieldsToUpdate: string[] = ['name = ?', 'description = ?', 'price = ?', 'category = ?', 'updated_at = CURRENT_TIMESTAMP'];
+    const values: any[] = [name.trim(), description || '', Number(price), category || 'general'];
+
+    if (image_data !== undefined) {
+      fieldsToUpdate.push('image_data = ?');
+      values.push(image_data);
+    }
+    if (image_url !== undefined) {
+      fieldsToUpdate.push('image_url = ?');
+      values.push(image_url);
+    }
+
+    values.push(id);
+    db.prepare(`UPDATE products SET ${fieldsToUpdate.join(', ')} WHERE id = ?`).run(...values);
+
+    const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    res.json({ success: true, product: formatProduct(updated) });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update product details' });
+    console.error('Update product error:', err);
+    res.status(500).json({ error: 'Failed to update product' });
   }
 });
 
-app.put('/api/admin/inventory/:sku', authenticateToken, requireAdmin, (req, res) => {
-  const { sku } = req.params;
+// PUT /api/admin/products/:id/stock — Admin restocks a product
+app.put('/api/admin/products/:id/stock', authenticateToken, requireAdmin, (req, res) => {
+  const { id } = req.params;
   const { stock } = req.body;
 
-  if (stock === undefined || stock < 0) {
-    return res.status(400).json({ error: 'Invalid stock level' });
+  if (stock === undefined || Number(stock) < 0) {
+    return res.status(400).json({ error: 'Valid stock quantity required' });
   }
 
   try {
-    const update = db.prepare('UPDATE inventory SET stock = ? WHERE sku = ?');
-    update.run(stock, sku);
-    res.json({ success: true });
+    db.prepare('UPDATE products SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(Number(stock), id);
+
+    const updated = db.prepare('SELECT id, name, stock FROM products WHERE id = ?').get(id) as any;
+    res.json({ success: true, id, stock: updated?.stock });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update inventory stock' });
+    res.status(500).json({ error: 'Failed to update stock' });
   }
 });
 
+// DELETE /api/admin/products/:id — Admin deletes a product
+app.delete('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) => {
+  const { id } = req.params;
+  try {
+    const product = db.prepare('SELECT id FROM products WHERE id = ?').get(id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    db.prepare('DELETE FROM products WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// GET /api/admin/orders — All orders
 app.get('/api/admin/orders', authenticateToken, requireAdmin, (req, res) => {
   try {
     const orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all() as any[];
@@ -1101,140 +1044,73 @@ app.get('/api/admin/orders', authenticateToken, requireAdmin, (req, res) => {
     });
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to retrieve customer orders list' });
+    res.status(500).json({ error: 'Failed to retrieve orders' });
   }
 });
 
+// PUT /api/admin/orders/:id/status — Update order status
 app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!status) return res.status(400).json({ error: 'Status coordinate required' });
+  if (!status) return res.status(400).json({ error: 'Status required' });
 
   try {
-    const update = db.prepare('UPDATE orders SET status = ? WHERE id = ?');
-    update.run(status, id);
+    db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
   }
 });
 
+// GET /api/admin/coupons — All coupons
+app.get('/api/admin/coupons', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const coupons = db.prepare('SELECT * FROM coupons ORDER BY code ASC').all();
+    res.json(coupons);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch coupons' });
+  }
+});
+
+// POST /api/admin/coupons — Create new coupon
+app.post('/api/admin/coupons', authenticateToken, requireAdmin, (req, res) => {
+  const { code, discount_type, discount_value, min_purchase, expires_at } = req.body;
+  if (!code || !discount_type || discount_value === undefined) {
+    return res.status(400).json({ error: 'Code, type, and discount value required' });
+  }
+
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO coupons (code, discount_type, discount_value, min_purchase, expires_at, active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `).run(code.toUpperCase(), discount_type, Number(discount_value), Number(min_purchase) || 0, expires_at || null);
+    res.status(201).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create coupon' });
+  }
+});
+
+// DELETE /api/admin/coupons/:code — Delete coupon
+app.delete('/api/admin/coupons/:code', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    db.prepare('DELETE FROM coupons WHERE code = ?').run(req.params.code.toUpperCase());
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete coupon' });
+  }
+});
+
 // Newsletter Subscriber
 app.post('/api/newsletter/subscribe', (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email coordinate required' });
+  if (!email) return res.status(400).json({ error: 'Email required' });
 
   try {
-    const insert = db.prepare('INSERT OR IGNORE INTO newsletter_subscribers (email) VALUES (?)');
-    insert.run(email.toLowerCase());
+    db.prepare('INSERT OR IGNORE INTO newsletter_subscribers (email) VALUES (?)').run(email.toLowerCase());
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Subscription failed' });
-  }
-});
-
-// ==========================================
-// 7b. RAZORPAY PAYMENT GATEWAY
-// ==========================================
-
-// Initialise Razorpay SDK once at startup
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
-});
-
-// POST /api/create-order — Creates a Razorpay order and returns order_id, amount, currency
-app.post('/api/create-order', async (req: Request, res: Response) => {
-  const { amount, currency = 'INR', receipt } = req.body;
-
-  // Validate minimum amount (Razorpay requires >= 100 paise = ₹1)
-  if (!amount || typeof amount !== 'number' || amount < 100) {
-    res.status(400).json({ error: 'Amount must be a number >= 100 paise (₹1)' });
-    return;
-  }
-
-  try {
-    const order = await razorpay.orders.create({
-      amount: Math.round(amount), // paise, must be integer
-      currency,
-      receipt: receipt || `rcpt_${Date.now()}`,
-    } as any);
-
-    res.json({
-      order_id: (order as any).id,
-      id: (order as any).id,        // alias for CheckoutModal compatibility
-      amount: (order as any).amount,
-      currency: (order as any).currency
-    });
-
-  } catch (err: any) {
-    console.error('[RAZORPAY] Create order failed:', err);
-    // Surface a clear error — most likely wrong credentials
-    res.status(500).json({ error: err?.error?.description || err?.message || 'Failed to create Razorpay order' });
-  }
-});
-
-// POST /api/verify-payment — Verifies Razorpay payment signature (HMAC-SHA256)
-app.post('/api/verify-payment', (req: Request, res: Response) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    res.status(400).json({ error: 'Missing required payment fields: order_id, payment_id, signature' });
-    return;
-  }
-
-  try {
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', keySecret)
-      .update(body)
-      .digest('hex');
-
-    if (expectedSignature === razorpay_signature) {
-      console.log(`[RAZORPAY] Payment verified ✓ — order: ${razorpay_order_id}, payment: ${razorpay_payment_id}`);
-      res.json({ verified: true });
-    } else {
-      console.warn(`[RAZORPAY] Signature mismatch — potential tampered request for order: ${razorpay_order_id}`);
-      res.status(400).json({ verified: false, error: 'Payment signature verification failed' });
-    }
-
-  } catch (err: any) {
-    console.error('[RAZORPAY] Signature verification error:', err);
-    res.status(500).json({ error: 'Signature verification encountered an internal error' });
-  }
-});
-
-// POST /api/payments/razorpay/verify — Alias for mock-flow compatibility
-app.post('/api/payments/razorpay/verify', (req: Request, res: Response) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-  // Allow mock signatures through (these come from the simulation overlay)
-  if (razorpay_signature === 'mock_signature') {
-    console.log('[MOCK-GATEWAY] Mock payment signature accepted — simulation mode');
-    res.json({ verified: true });
-    return;
-  }
-
-  // Otherwise run real HMAC check
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    res.status(400).json({ error: 'Missing required payment fields' });
-    return;
-  }
-
-  try {
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = crypto.createHmac('sha256', keySecret).update(body).digest('hex');
-
-    if (expectedSignature === razorpay_signature) {
-      res.json({ verified: true });
-    } else {
-      res.status(400).json({ verified: false, error: 'Payment signature verification failed' });
-    }
-  } catch (err: any) {
-    res.status(500).json({ error: 'Signature verification error' });
   }
 });
 
@@ -1246,7 +1122,7 @@ const distPath = path.resolve(process.cwd(), 'dist');
 if (fs.existsSync(distPath)) {
   console.log('Serving production-built assets from:', distPath);
   app.use(express.static(distPath));
-  
+
   // SPA Fallback: serve index.html for non-api routes
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) {

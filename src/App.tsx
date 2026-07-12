@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, Order, PhoneModel, CaseMaterial, CaseColor } from './types';
-import { PRODUCTS } from './data/products';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from './components/Navbar';
@@ -60,7 +59,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'catalog' | 'lab' | 'orders' | 'about' | 'contact' | 'privacy' | 'terms' | 'returns'>('catalog');
   
   // Products, Auth, and Admin states
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('yogantak_token'));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -149,22 +148,24 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
-  // Fetch products from database
+  const [productsLoading, setProductsLoading] = useState(true);
+
+  // Fetch products from database — no static fallback; admin adds products via dashboard
   useEffect(() => {
+    setProductsLoading(true);
     fetch('/api/products')
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch products');
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setProducts(data);
-        }
-        // if API returns empty array, keep static PRODUCTS as fallback
+        setProducts(Array.isArray(data) ? data : []);
       })
       .catch(err => {
-        console.error('Error fetching database products, falling back to static config:', err);
-      });
+        console.error('Error fetching products from database:', err);
+        setProducts([]);
+      })
+      .finally(() => setProductsLoading(false));
   }, []);
 
 
@@ -216,7 +217,7 @@ export default function App() {
 
   // Loaded presets inside Detail Modals
   const [chosenDetailModel, setChosenDetailModel] = useState<PhoneModel>('iPhone 15 Pro Max');
-  const [chosenDetailColor, setChosenDetailColor] = useState<CaseColor>(PRODUCTS[0].colors[0]);
+  const [chosenDetailColor, setChosenDetailColor] = useState<CaseColor>({ id: 'default', name: 'Default', value: '#111827', bgClass: 'bg-gray-900', textContrast: 'light' });
   const [chosenDetailMaterial, setChosenDetailMaterial] = useState<CaseMaterial>('Premium Pebble Leather');
 
   // Personalization Lab Preset Arguments
@@ -305,74 +306,43 @@ export default function App() {
     );
   };
 
-  // Filter list of cases using the criteria
+  // Filter list of cases using the criteria (simplified for flat product schema)
   const getFilteredProducts = () => {
     let filtered = [...products];
 
     // Search query matching
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
+      filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.materials.some(m => m.toLowerCase().includes(q))
+        (p.description || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q)
       );
     }
 
-    // Model matching (selectedModels array)
-    if (selectedModels.length > 0) {
-      filtered = filtered.filter(p => 
-        p.models.some(m => selectedModels.includes(m))
+    // Category filter (using product.category field)
+    if (activeCategory !== 'all') {
+      filtered = filtered.filter(p =>
+        (p.category || '').toLowerCase().includes(activeCategory.toLowerCase())
       );
-    }
-
-    // Case type matching
-    if (selectedCaseTypes.length > 0) {
-      filtered = filtered.filter(p => {
-        const types = getProductCaseTypes(p);
-        return selectedCaseTypes.some(t => types.includes(t));
-      });
-    }
-
-    // Material matching
-    if (selectedMaterials.length > 0) {
-      filtered = filtered.filter(p => 
-        p.materials.some(m => selectedMaterials.includes(m))
-      );
-    }
-
-    // Color matching
-    if (selectedColors.length > 0) {
-      filtered = filtered.filter(p => 
-        p.colors.some(c => selectedColors.includes(c.id))
-      );
-    }
-
-    // MagSafe filter
-    if (magsafeFilter) {
-      filtered = filtered.filter(p => p.magsafe);
-    }
-
-    // Wireless charging filter
-    if (wirelessFilter) {
-      filtered = filtered.filter(p => p.id !== 'bio-wheat');
     }
 
     // In Stock filter
     if (inStockFilter) {
-      filtered = filtered.filter(p => p.id !== 'stealth-aramid');
+      filtered = filtered.filter(p => (p.stock ?? 0) > 0);
     }
 
     // Price range filtering
-    filtered = filtered.filter(p => p.basePrice >= minPrice && p.basePrice <= maxPrice);
+    filtered = filtered.filter(p => (p.price ?? p.basePrice ?? 0) >= minPrice && (p.price ?? p.basePrice ?? 0) <= maxPrice);
 
     // Sorting
+    const getPrice = (p: Product) => p.price ?? p.basePrice ?? 0;
     if (sortBy === 'price-asc') {
-      filtered.sort((a, b) => a.basePrice - b.basePrice);
+      filtered.sort((a, b) => getPrice(a) - getPrice(b));
     } else if (sortBy === 'price-desc') {
-      filtered.sort((a, b) => b.basePrice - a.basePrice);
+      filtered.sort((a, b) => getPrice(b) - getPrice(a));
     } else if (sortBy === 'rating') {
-      filtered.sort((a, b) => b.rating - a.rating);
+      filtered.sort((a, b) => (b.rating ?? 5) - (a.rating ?? 5));
     }
 
     return filtered;
@@ -427,12 +397,11 @@ export default function App() {
   };
 
 
-  // Add standard product variant to shopping cart
+  // Add product to shopping cart
   const handleAddToCart = (product: Product, quantity: number, model: PhoneModel, color: CaseColor, material: CaseMaterial) => {
     setCart((prev) => {
-      // Define a standard unique ID based on selections (product id + model + material + color)
-      const uniqueItemId = `${product.id}-${model.replace(/\s+/g, '')}-${material.replace(/\s+/g, '')}-${color.id}`;
-      
+      const uniqueItemId = `${product.id}-${(model || 'default').replace(/\s+/g, '')}-${(material || 'default').replace(/\s+/g, '')}-${color?.id || 'default'}`;
+
       const existingIdx = prev.findIndex(item => item.id === uniqueItemId);
 
       if (existingIdx > -1) {
@@ -447,13 +416,13 @@ export default function App() {
           selectedModel: model,
           selectedMaterial: material,
           selectedColor: color,
-          price: product.basePrice
+          price: product.price ?? product.basePrice ?? 0
         };
         return [...prev, newItem];
       }
     });
 
-    setIsCartOpen(true); // Open immediately for great tactile feedback
+    setIsCartOpen(true);
   };
 
   // Quick additive handler for the catalog listings cards
@@ -469,7 +438,9 @@ export default function App() {
         id: `bespoke-${Date.now()}`,
         name: `Bespoke Engraved Case Studio`,
         description: `Bespoke tailored ${config.material} matching case built inside the Personalization Laboratory. Featuring dynamic initial engravings inside secure hot stamp foil.`,
+        price: price,
         basePrice: price,
+        stock: 999,
         rating: 5.0,
         reviewsCount: 1,
         models: [config.model],
@@ -693,7 +664,24 @@ export default function App() {
                   </div>
 
                   {/* Grid / List of products */}
-                  {getFilteredProducts().length === 0 ? (
+                  {productsLoading ? (
+                    <div className="py-24 flex flex-col items-center justify-center gap-4 text-white/40">
+                      <div className="w-10 h-10 border-2 border-white/20 border-t-violet-500 rounded-full animate-spin" />
+                      <p className="text-sm">Loading catalog...</p>
+                    </div>
+                  ) : products.length === 0 ? (
+                    <div className="bg-[#18181b]/50 border border-neutral-850 rounded-3xl py-24 text-center space-y-4 shadow-xl backdrop-blur-md">
+                      <svg className="w-14 h-14 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                      <div className="space-y-1.5">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-white">No Products Yet</h3>
+                        <p className="text-xs text-neutral-450 font-mono uppercase tracking-widest max-w-sm mx-auto">
+                          The catalog is empty. Log in as admin to add products.
+                        </p>
+                      </div>
+                    </div>
+                  ) : getFilteredProducts().length === 0 ? (
                     <div className="bg-[#18181b]/50 border border-neutral-850 rounded-3xl py-24 text-center space-y-4 shadow-xl backdrop-blur-md">
                       <Sliders className="w-10 h-10 text-neutral-500 mx-auto" />
                       <div className="space-y-1.5">
@@ -710,7 +698,7 @@ export default function App() {
                       </button>
                     </div>
                   ) : (
-                    <div className={gridView === 'grid' 
+                    <div className={gridView === 'grid'
                       ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
                       : "flex flex-col gap-4"
                     }>
@@ -727,6 +715,7 @@ export default function App() {
                       ))}
                     </div>
                   )}
+
 
                   {/* Pagination control */}
                   {getFilteredProducts().length > productsPerPage && (

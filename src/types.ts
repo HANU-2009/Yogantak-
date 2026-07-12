@@ -29,16 +29,22 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  basePrice: number;
-  rating: number;
-  reviewsCount: number;
-  models: PhoneModel[];
-  materials: CaseMaterial[];
-  colors: CaseColor[];
-  image: string; // Fallback or key to CSS renderer
-  tags: string[];
-  features: string[];
-  magsafe: boolean;
+  price: number;
+  // Legacy field aliases kept for backward compat with checkout/cart components
+  basePrice?: number;
+  stock: number;
+  image: string;         // URL or base64 data URI
+  image_data?: string;   // Raw base64
+  category?: string;
+  rating?: number;
+  reviewsCount?: number;
+  // Legacy variant fields — kept empty arrays so old components don't crash
+  models?: string[];
+  materials?: string[];
+  colors?: any[];
+  tags?: string[];
+  features?: string[];
+  magsafe?: boolean;
   bestseller?: boolean;
   ecoFriendly?: boolean;
 }

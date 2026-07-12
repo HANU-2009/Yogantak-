@@ -54,6 +54,25 @@ export function initSchema() {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec('PRAGMA journal_mode = WAL;');
 
+  // ── SIMPLIFIED PRODUCTS TABLE ──
+  // Single flat table: no separate variant/inventory/SKU tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      price REAL NOT NULL DEFAULT 0,
+      stock INTEGER NOT NULL DEFAULT 0,
+      category TEXT DEFAULT 'general',
+      image_data TEXT DEFAULT '', -- Base64 encoded image data URI
+      image_url TEXT DEFAULT '',  -- External image URL fallback
+      rating REAL DEFAULT 5.0,
+      reviews_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Users Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -66,96 +85,11 @@ export function initSchema() {
     );
   `);
 
-  // Products Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT,
-      base_price REAL NOT NULL,
-      rating REAL DEFAULT 5.0,
-      reviews_count INTEGER DEFAULT 0,
-      image TEXT NOT NULL,
-      magsafe INTEGER DEFAULT 0,
-      bestseller INTEGER DEFAULT 0,
-      eco_friendly INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  // Product Models Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_models (
-      product_id TEXT NOT NULL,
-      model TEXT NOT NULL,
-      PRIMARY KEY (product_id, model),
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Product Materials Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_materials (
-      product_id TEXT NOT NULL,
-      material TEXT NOT NULL,
-      PRIMARY KEY (product_id, material),
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Product Colors Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_colors (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id TEXT NOT NULL,
-      color_id TEXT NOT NULL,
-      color_name TEXT NOT NULL,
-      color_value TEXT NOT NULL,
-      bg_class TEXT NOT NULL,
-      text_contrast TEXT NOT NULL,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Product Tags Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_tags (
-      product_id TEXT NOT NULL,
-      tag TEXT NOT NULL,
-      PRIMARY KEY (product_id, tag),
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Product Features Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS product_features (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id TEXT NOT NULL,
-      feature TEXT NOT NULL,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Inventory Table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS inventory (
-      sku TEXT PRIMARY KEY,
-      product_id TEXT NOT NULL,
-      model TEXT NOT NULL,
-      material TEXT NOT NULL,
-      color_id TEXT NOT NULL,
-      stock INTEGER NOT NULL DEFAULT 10,
-      low_stock_threshold INTEGER DEFAULT 3,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-    );
-  `);
-
   // Coupons Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS coupons (
       code TEXT PRIMARY KEY,
-      discount_type TEXT NOT NULL, -- 'flat' or 'percent'
+      discount_type TEXT NOT NULL,
       discount_value REAL NOT NULL,
       min_purchase REAL DEFAULT 0,
       expires_at DATETIME,
@@ -169,7 +103,7 @@ export function initSchema() {
       id TEXT PRIMARY KEY,
       user_id INTEGER,
       email TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'processing', -- 'processing', 'shipped', 'cancelled', 'returned'
+      status TEXT NOT NULL DEFAULT 'processing',
       subtotal REAL NOT NULL,
       tax REAL NOT NULL,
       total REAL NOT NULL,
@@ -182,8 +116,7 @@ export function initSchema() {
       coupon_code TEXT,
       payment_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-      FOREIGN KEY (coupon_code) REFERENCES coupons(code)
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
   `);
 
@@ -193,12 +126,10 @@ export function initSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id TEXT NOT NULL,
       product_id TEXT NOT NULL,
+      product_name TEXT NOT NULL,
       quantity INTEGER NOT NULL,
-      selected_model TEXT NOT NULL,
-      selected_material TEXT NOT NULL,
-      selected_color_id TEXT NOT NULL,
       price REAL NOT NULL,
-      custom_config TEXT, -- JSON string for custom lab cases
+      custom_config TEXT,
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
   `);
@@ -233,7 +164,7 @@ export function initSchema() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS carts (
       user_id INTEGER PRIMARY KEY,
-      cart_items TEXT NOT NULL, -- JSON string containing persistent cart items
+      cart_items TEXT NOT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -247,10 +178,12 @@ export function initSchema() {
     );
   `);
 
-  // Indexes for query performance optimization
-  db.exec('CREATE INDEX IF NOT EXISTS idx_products_bestseller ON products(bestseller);');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);');
+  // Indexes for query performance
+  db.exec('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at);');
   db.exec('CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);');
   db.exec('CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);');
   db.exec('CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);');
+
+  console.log('[SQLITE] Schema initialized successfully.');
 }
