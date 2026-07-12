@@ -18,6 +18,8 @@ import ContactUs from './components/ContactUs';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsConditions from './components/TermsConditions';
 import ReturnsPolicy from './components/ReturnsPolicy';
+import CancellationRefund from './components/CancellationRefund';
+import ShippingExchange from './components/ShippingExchange';
 import { Sparkles, HelpCircle, ShieldAlert, BadgeCheck, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CATEGORIES = [
@@ -816,6 +818,12 @@ export default function App() {
         {/* TAB 8: RETURNS POLICY */}
         {activeTab === 'returns' && <ReturnsPolicy />}
 
+        {/* TAB 9: CANCELLATION & REFUND */}
+        {activeTab === 'cancellation' && <CancellationRefund />}
+
+        {/* TAB 10: SHIPPING & EXCHANGE */}
+        {activeTab === 'shipping' && <ShippingExchange />}
+
       </main>
 
       {/* Persistent global modular slide-overs and checkout containers */}
@@ -877,14 +885,14 @@ export default function App() {
             <div className="flex flex-col gap-1 text-[#c1c6d7]">
               <span>Email: concierge@yogantak.com</span>
               <span>Support Desk: 1-800-YOGANTAK</span>
-              <div className="flex gap-3 pt-2 font-bold uppercase tracking-wider text-[10px]">
+              <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 font-bold uppercase tracking-wider text-[10px]">
                 <button onClick={() => setActiveTab('about')} className="hover:text-white transition-colors cursor-pointer">About Us</button>
-                <button onClick={() => setActiveTab('contact')} className="hover:text-white transition-colors cursor-pointer">Contact</button>
-              </div>
-              <div className="flex gap-3 pt-1 font-bold uppercase tracking-wider text-[10px]">
+                <button onClick={() => setActiveTab('contact')} className="hover:text-white transition-colors cursor-pointer">Contact Us</button>
+                <button onClick={() => setActiveTab('terms')} className="hover:text-white transition-colors cursor-pointer">Terms & Conditions</button>
                 <button onClick={() => setActiveTab('privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy Policy</button>
-                <button onClick={() => setActiveTab('terms')} className="hover:text-white transition-colors cursor-pointer">Terms</button>
-                <button onClick={() => setActiveTab('returns')} className="hover:text-white transition-colors cursor-pointer">Returns</button>
+                <button onClick={() => setActiveTab('cancellation')} className="hover:text-white transition-colors cursor-pointer">Cancellation & Refund</button>
+                <button onClick={() => setActiveTab('shipping')} className="hover:text-white transition-colors cursor-pointer">Shipping & Exchange</button>
+                <button onClick={() => setActiveTab('returns')} className="hover:text-white transition-colors cursor-pointer">Returns Policy</button>
               </div>
               <span className="mt-2 text-neutral-500">Designed in minimalist creative workspaces. All rights reserved. • 2026</span>
             </div>
