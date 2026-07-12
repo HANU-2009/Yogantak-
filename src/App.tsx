@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Product, CartItem, Order, PhoneModel, CaseMaterial, CaseColor } from './types';
 import { PRODUCTS } from './data/products';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
 import FilterSidebar from './components/FilterSidebar';
@@ -64,31 +66,41 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
 
-  // Sync token to localStorage and verify user
+  // Listen to Firebase Auth state change and sync to server
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('yogantak_token', token);
-      fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('Session expired');
-          return res.json();
-        })
-        .then(data => {
-          setUser(data.user);
-        })
-        .catch(err => {
-          console.error(err);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const idToken = await firebaseUser.getIdToken();
+          setToken(idToken);
+          localStorage.setItem('yogantak_token', idToken);
+          
+          const res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data.user);
+          } else {
+            setToken(null);
+            setUser(null);
+            localStorage.removeItem('yogantak_token');
+          }
+        } catch (err) {
+          console.error('Error syncing auth state:', err);
           setToken(null);
           setUser(null);
           localStorage.removeItem('yogantak_token');
-        });
-    } else {
-      localStorage.removeItem('yogantak_token');
-      setUser(null);
-    }
-  }, [token]);
+        }
+      } else {
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem('yogantak_token');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Handle SEO Metadata when tab changes
   useEffect(() => {
