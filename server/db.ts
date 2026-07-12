@@ -2,17 +2,40 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import fs from 'fs';
 
-// Resolve database path
-let dbPath = path.resolve(process.cwd(), 'data.db');
+// Resolve database path at runtime
+let sourceDbPath = '';
+const possiblePaths = [
+  path.resolve(process.cwd(), 'data.db'),
+  path.resolve(process.cwd(), 'api', 'data.db'),
+  path.resolve(process.cwd(), 'server', 'data.db'),
+  path.resolve(__dirname, 'data.db'),
+  path.resolve(__dirname, '..', 'data.db'),
+  path.resolve(__dirname, '../..', 'data.db'),
+];
+
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    sourceDbPath = p;
+    console.log(`[SQLITE] Located source database at: ${p}`);
+    break;
+  }
+}
+
+if (!sourceDbPath) {
+  sourceDbPath = path.resolve(process.cwd(), 'data.db');
+  console.warn(`[SQLITE] Source data.db not found. Fallback: ${sourceDbPath}`);
+}
+
+let dbPath = sourceDbPath;
 
 if (process.env.VERCEL) {
   const tmpDbPath = path.join('/tmp', 'data.db');
   if (!fs.existsSync(tmpDbPath)) {
     try {
-      fs.copyFileSync(dbPath, tmpDbPath);
-      console.log('Successfully copied data.db to /tmp/data.db');
+      fs.copyFileSync(sourceDbPath, tmpDbPath);
+      console.log(`[SQLITE] Successfully copied database from ${sourceDbPath} to ${tmpDbPath}`);
     } catch (e) {
-      console.error('Failed to copy database to /tmp/data.db:', e);
+      console.error(`[SQLITE] Failed to copy database to ${tmpDbPath}:`, e);
     }
   }
   dbPath = tmpDbPath;
