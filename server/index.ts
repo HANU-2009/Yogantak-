@@ -1047,7 +1047,7 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
 app.get('/api/admin/inventory', authenticateToken, requireAdmin, (req, res) => {
   try {
     const list = db.prepare(`
-      SELECT i.*, p.name as product_name 
+      SELECT i.*, p.name as product_name, p.base_price, p.description 
       FROM inventory i
       JOIN products p ON i.product_id = p.id
       ORDER BY i.stock ASC
@@ -1055,6 +1055,23 @@ app.get('/api/admin/inventory', authenticateToken, requireAdmin, (req, res) => {
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve stock list' });
+  }
+});
+
+app.put('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const { name, description, base_price } = req.body;
+
+  if (!name || base_price === undefined || base_price < 0) {
+    return res.status(400).json({ error: 'Name and base price are required and must be valid' });
+  }
+
+  try {
+    const update = db.prepare('UPDATE products SET name = ?, description = ?, base_price = ? WHERE id = ?');
+    update.run(name, description || '', Number(base_price), id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update product details' });
   }
 });
 

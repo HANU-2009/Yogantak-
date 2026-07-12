@@ -49,6 +49,12 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
   const [discountValue, setDiscountValue] = useState(10);
   const [minPurchase, setMinPurchase] = useState(40);
 
+  // Product Editing fields
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingPrice, setEditingPrice] = useState(0);
+  const [editingDesc, setEditingDesc] = useState('');
+
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'inventory' | 'orders' | 'coupons'>('overview');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -103,6 +109,36 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleUpdateProduct = async (productId: string) => {
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editingName,
+          base_price: editingPrice,
+          description: editingDesc
+        })
+      });
+      if (res.ok) {
+        setMessage(`Product ${editingName} updated successfully.`);
+        setEditingProductId(null);
+        fetchDashboardData();
+        setTimeout(() => setMessage(null), 2500);
+      } else {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update product details');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage(`Error: ${err.message}`);
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -306,56 +342,132 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
                   <th className="p-4">Case Preview</th>
                   <th className="p-4">SKU / ID</th>
                   <th className="p-4">Product Name</th>
+                  <th className="p-4">Price (₹)</th>
+                  <th className="p-4">Description</th>
                   <th className="p-4">Model & Colors</th>
                   <th className="p-4 text-center">Stock Level</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-900">
-                {inventoryList.map(item => (
-                  <tr key={item.sku} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4">
-                      <div className="w-10 h-14 bg-white/5 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative">
-                        <img 
-                          src={getModelImage(item.model)} 
-                          alt={item.model} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </td>
-                    <td className="p-4 font-mono text-[10px] text-neutral-450">{item.sku}</td>
-                    <td className="p-4 font-bold">{item.product_name}</td>
-                    <td className="p-4">
-                      <span className="block text-neutral-300">{item.model}</span>
-                      <span className="text-[10px] text-neutral-450 font-mono capitalize">{item.color_id} • {item.material.replace('Premium ', '')}</span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                        item.stock <= item.low_stock_threshold
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      }`}>
-                        {item.stock} left
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="inline-flex gap-1">
-                        <button
-                          onClick={() => handleUpdateStock(item.sku, Math.max(0, item.stock - 5))}
-                          className="px-2 py-1 bg-white/5 border border-white/10 hover:bg-neutral-800 rounded text-[10px] cursor-pointer"
-                        >
-                          -5
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStock(item.sku, item.stock + 10)}
-                          className="px-2 py-1 bg-white/5 border border-white/10 hover:bg-neutral-800 rounded text-[10px] cursor-pointer"
-                        >
-                          +10
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {inventoryList.map(item => {
+                  const isEditing = editingProductId === item.product_id;
+                  return (
+                    <tr key={item.sku} className="hover:bg-white/5 transition-colors">
+                      <td className="p-4">
+                        <div className="w-10 h-14 bg-white/5 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative">
+                          <img 
+                            src={getModelImage(item.model)} 
+                            alt={item.model} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </td>
+                      <td className="p-4 font-mono text-[10px] text-neutral-450">{item.sku}</td>
+                      <td className="p-4">
+                        {isEditing ? (
+                          <input 
+                            type="text" 
+                            value={editingName} 
+                            onChange={e => setEditingName(e.target.value)} 
+                            className="bg-neutral-800 border border-neutral-700 text-white text-xs rounded px-2 py-1 w-full font-bold"
+                          />
+                        ) : (
+                          <span className="font-bold">{item.product_name}</span>
+                        )}
+                      </td>
+                      <td className="p-4 font-mono">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-neutral-400">₹</span>
+                            <input 
+                              type="number" 
+                              value={editingPrice} 
+                              onChange={e => setEditingPrice(Number(e.target.value))} 
+                              className="bg-neutral-800 border border-neutral-700 text-white text-xs rounded px-2 py-1 w-20 font-bold"
+                            />
+                          </div>
+                        ) : (
+                          <span className="font-bold text-emerald-455">₹{item.base_price || 0}</span>
+                        )}
+                      </td>
+                      <td className="p-4 max-w-[200px]">
+                        {isEditing ? (
+                          <textarea 
+                            value={editingDesc} 
+                            onChange={e => setEditingDesc(e.target.value)} 
+                            className="bg-neutral-800 border border-neutral-700 text-white text-xs rounded px-2 py-1 w-full h-12 resize-none"
+                          />
+                        ) : (
+                          <p className="text-neutral-400 line-clamp-2 leading-relaxed text-[11px]">{item.description || 'No description provided.'}</p>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <span className="block text-neutral-300">{item.model}</span>
+                        <span className="text-[10px] text-neutral-450 font-mono capitalize">{item.color_id} • {item.material.replace('Premium ', '')}</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          item.stock <= item.low_stock_threshold
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                          {item.stock} left
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex flex-col gap-1.5 justify-end items-end">
+                          {isEditing ? (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleUpdateProduct(item.product_id)}
+                                className="px-2 py-1 bg-emerald-600 text-white hover:bg-emerald-700 rounded text-[10px] cursor-pointer font-bold transition-all"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingProductId(null)}
+                                className="px-2 py-1 bg-neutral-800 text-neutral-400 hover:text-white rounded text-[10px] cursor-pointer transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditingProductId(item.product_id);
+                                  setEditingName(item.product_name);
+                                  setEditingPrice(item.base_price || 0);
+                                  setEditingDesc(item.description || '');
+                                }}
+                                className="px-2 py-1 bg-[#adc6ff]/10 hover:bg-[#adc6ff] text-[#adc6ff] hover:text-black rounded text-[10px] cursor-pointer font-semibold transition-all"
+                              >
+                                Edit Details
+                              </button>
+                              <div className="flex gap-0.5">
+                                <button
+                                  onClick={() => handleUpdateStock(item.sku, Math.max(0, item.stock - 5))}
+                                  className="px-1.5 py-1 bg-white/5 border border-white/10 hover:bg-neutral-800 rounded text-[9px] cursor-pointer"
+                                  title="Deduct 5 stock"
+                                >
+                                  -5
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateStock(item.sku, item.stock + 10)}
+                                  className="px-1.5 py-1 bg-white/5 border border-white/10 hover:bg-neutral-800 rounded text-[9px] cursor-pointer"
+                                  title="Add 10 stock"
+                                >
+                                  +10
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
