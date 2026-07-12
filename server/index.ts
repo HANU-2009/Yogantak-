@@ -29,13 +29,7 @@ function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
     : [];
 
   const defaultAdmins = [
-    'admin@yogantak.com',
-    'concierge@yogantak.com',
-    'sonpu97@gmail.com',
-    'hanu-2009@gmail.com',
-    'hanu2009@gmail.com',
-    'hanu.2009@gmail.com',
-    'sonpu@yogantak.com'
+    'sonpureachintya@gmail.com'
   ];
 
   const isAdmin = envAdmins.includes(email.toLowerCase()) || defaultAdmins.includes(email.toLowerCase());
