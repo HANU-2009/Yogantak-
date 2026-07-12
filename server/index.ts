@@ -1224,7 +1224,11 @@ if (fs.existsSync(distPath)) {
   console.log('Static directory dist/ does not exist. Frontend dev proxy server active.');
 }
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`[YOGANTAK API SERVER] listening on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`[YOGANTAK API SERVER] listening on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
