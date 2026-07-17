@@ -28,8 +28,8 @@ export default function CheckoutModal({
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
   const taxableAmount = Math.max(0, subtotal - discount);
-  const shippingCost = subtotal >= 4000 ? 0 : 150;
-  const tax = taxableAmount * 0.18; // 18% GST (Indian electronic accessories standard rate)
+  const shippingCost = 0; // Removed for trial
+  const tax = 0; // Removed for trial
   const total = taxableAmount + shippingCost + tax;
 
   // Checkout phase: 'shipping' | 'payment' | 'authorizing' | 'success'
@@ -745,7 +745,7 @@ export default function CheckoutModal({
                       <span>{completedOrder.shippingCost === 0 ? 'FREE' : `₹${completedOrder.shippingCost.toLocaleString('en-IN')}`}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">GST Tax (18%):</span>
+                      <span className="text-gray-400">GST Tax (5%):</span>
                       <span>₹{completedOrder.tax.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between text-sm pt-2 border-t border-gray-150">

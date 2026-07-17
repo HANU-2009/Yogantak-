@@ -25,7 +25,7 @@ function decodeJwtPayload(token: string): any {
 }
 
 // ── Shared helper: upsert user into DB and return user + cart ──
-function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
+async function syncUserToDB(email: string, name: string): Promise<{ user: any; cart: any[] }> {
   // Determine if this user should be granted admin credentials
   const envAdmins = process.env.ADMIN_EMAILS
     ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
@@ -38,27 +38,27 @@ function syncUserToDB(email: string, name: string): { user: any; cart: any[] } {
   const isAdmin = envAdmins.includes(email.toLowerCase()) || defaultAdmins.includes(email.toLowerCase());
   const targetRole = isAdmin ? 'admin' : 'customer';
 
-  const selectQuery = db.prepare('SELECT * FROM users WHERE email = ?');
-  let user = selectQuery.get(email) as any;
-
+  const res = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  let user = res.rows[0];
+  
   if (!user) {
     const fullName = name || email.split('@')[0];
-    const insert = db.prepare(`
+    await db.query(`
       INSERT INTO users (email, password_hash, full_name, role)
-      VALUES (?, 'firebase_managed', ?, ?)
-    `);
-    const info = insert.run(email, fullName, targetRole);
-    const userId = Number(info.lastInsertRowid);
-    user = { id: userId, email, full_name: fullName, role: targetRole };
-  } else if (user.role !== targetRole) {
-    const update = db.prepare('UPDATE users SET role = ? WHERE id = ?');
-    update.run(targetRole, user.id);
-    user.role = targetRole;
-    console.log(`[SQLITE] Promoted user ${email} to ${targetRole} role.`);
+      VALUES ($1, 'firebase_managed', $2, $3)
+    `, [email, fullName, targetRole]);
+    const res2 = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    user = res2.rows[0];
+  } else {
+    // If the user's role should be upgraded based on admin list
+    if (user.role !== targetRole) {
+      await db.query('UPDATE users SET role = $1 WHERE id = $2', [targetRole, user.id]);
+      user.role = targetRole;
+    }
   }
 
-  const cartQuery = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-  const cartData = cartQuery.get(user.id) as any;
+  const cartRes = await db.query('SELECT cart_items FROM carts WHERE user_id = $1', [user.id]);
+  const cartData = cartRes.rows[0] as any;
   const cart = cartData ? JSON.parse(cartData.cart_items) : [];
 
   return {
@@ -98,9 +98,9 @@ function formatProduct(product: any) {
 
 const app = express();
 
-// Increase body size limit to 20MB to support base64 image uploads
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ limit: '20mb', extended: true }));
+// Increase body size limit to 50MB to support base64 image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Enable CORS
 app.use((req, res, next) => {
@@ -142,6 +142,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
     fullName: string;
+    name?: string;
   };
 }
 
@@ -174,13 +175,13 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
       return;
     }
 
-    // Look up the user in our local SQLite database by email
-    const userQuery = db.prepare('SELECT id, email, role, full_name as fullName FROM users WHERE email = ?');
-    const user = userQuery.get(email) as any;
+    // Look up the user in our local Postgres database by email
+    const resDb = await db.query('SELECT id, email, role, full_name as fullName FROM users WHERE email = $1', [email]);
+    const user = resDb.rows[0];
 
     if (!user) {
       // Auto-sync unknown user on token validation
-      const { user: syncedUser } = syncUserToDB(email, '');
+      const { user: syncedUser } = await syncUserToDB(email, '');
       req.user = {
         id: syncedUser.id,
         email: syncedUser.email,
@@ -249,7 +250,7 @@ app.post('/api/auth/sync', async (req, res) => {
       return;
     }
 
-    const { user, cart } = syncUserToDB(email, name || '');
+    const { user, cart } = await syncUserToDB(email, name || '');
     res.json({ user, cart });
 
   } catch (error) {
@@ -258,8 +259,13 @@ app.post('/api/auth/sync', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', authenticateToken, (req: AuthRequest, res) => {
-  res.json({ user: req.user });
+app.get('/api/auth/me', authenticateToken, async (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const email = req.user.email;
+  const { user, cart } = await syncUserToDB(email, req.user.name || '');
+  res.json({ user, cart });
 });
 
 // POST /api/auth/google — Google OAuth callback handler
@@ -291,7 +297,7 @@ app.post('/api/auth/google', async (req, res) => {
       return;
     }
 
-    const { user, cart } = syncUserToDB(email, name);
+    const { user, cart } = await syncUserToDB(email, name);
     const sessionToken = isMock
       ? Buffer.from(JSON.stringify({ email, name, iat: Date.now(), mock: true })).toString('base64')
       : token;
@@ -345,7 +351,7 @@ app.post('/api/auth/microsoft', async (req, res) => {
       return;
     }
 
-    const { user, cart } = syncUserToDB(email, name);
+    const { user, cart } = await syncUserToDB(email, name);
     const sessionToken = Buffer.from(JSON.stringify({ email, name, iat: Date.now() })).toString('base64');
     res.json({ token: sessionToken, user, cart });
 
@@ -371,7 +377,7 @@ app.post('/api/auth/otp/send', (req, res) => {
   res.json({ success: true, message: 'OTP sent successfully' });
 });
 
-app.post('/api/auth/otp/verify', (req, res) => {
+app.post('/api/auth/otp/verify', async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) {
     res.status(400).json({ error: 'Email and OTP code are required' });
@@ -394,7 +400,7 @@ app.post('/api/auth/otp/verify', (req, res) => {
   }
 
   otpStore.delete(email.toLowerCase());
-  const { user, cart } = syncUserToDB(email.toLowerCase(), '');
+  const { user, cart } = await syncUserToDB(email.toLowerCase(), '');
   const sessionToken = Buffer.from(JSON.stringify({ email: email.toLowerCase(), iat: Date.now(), method: 'otp' })).toString('base64');
   res.json({ token: sessionToken, user, cart });
 });
@@ -405,9 +411,10 @@ app.post('/api/auth/otp/verify', (req, res) => {
 // ==========================================
 
 // GET /api/products — Public product catalog
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   try {
-    const products = db.prepare('SELECT * FROM products ORDER BY created_at DESC').all() as any[];
+    const resDb = await db.query('SELECT * FROM products ORDER BY created_at DESC');
+    const products = resDb.rows as any[];
     res.json(products.map(formatProduct));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch product catalog' });
@@ -415,10 +422,11 @@ app.get('/api/products', (req, res) => {
 });
 
 // GET /api/products/:id — Single product detail
-app.get('/api/products/:id', (req, res) => {
-  const { id } = req.params;
+app.get('/api/products/:id', async (req, res) => {
   try {
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    const { id } = req.params;
+    const resDb = await db.query('SELECT * FROM products WHERE id = $1', [id]);
+    const product = resDb.rows[0] as any;
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json(formatProduct(product));
   } catch (err) {
@@ -427,17 +435,18 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 // Reviews fetch and post
-app.get('/api/products/:id/reviews', (req, res) => {
-  const { id } = req.params;
+app.get('/api/products/:id/reviews', async (req, res) => {
   try {
-    const reviews = db.prepare('SELECT * FROM reviews WHERE product_id = ? ORDER BY created_at DESC').all(id);
+    const { id } = req.params;
+    const resDb = await db.query('SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC', [id]);
+    const reviews = resDb.rows;
     res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
 
-app.post('/api/products/:id/reviews', (req, res) => {
+app.post('/api/products/:id/reviews', async (req, res) => {
   const { id } = req.params;
   const { rating, comment, reviewerName } = req.body;
 
@@ -446,24 +455,23 @@ app.post('/api/products/:id/reviews', (req, res) => {
   }
 
   try {
-    const insert = db.prepare(`
+    await db.query(`
       INSERT INTO reviews (product_id, reviewer_name, rating, comment)
-      VALUES (?, ?, ?, ?)
-    `);
-    insert.run(id, reviewerName, rating, comment);
+      VALUES ($1, $2, $3, $4)
+    `, [id, reviewerName, rating, comment]);
 
     // Update product overall rating metrics
-    const stats = db.prepare(`
+    const statsRes = await db.query(`
       SELECT AVG(rating) as avgRating, COUNT(id) as countReviews
-      FROM reviews WHERE product_id = ?
-    `).get(id) as any;
+      FROM reviews WHERE product_id = $1
+    `, [id]);
+    const stats = statsRes.rows[0] as any;
 
-    const update = db.prepare(`
+    await db.query(`
       UPDATE products
-      SET rating = ?, reviews_count = ?
-      WHERE id = ?
-    `);
-    update.run(Number(stats.avgRating.toFixed(1)), stats.countReviews, id);
+      SET rating = $1, reviews_count = $2
+      WHERE id = $3
+    `, [Number(stats.avgrating).toFixed(1), stats.countreviews, id]);
 
     res.status(201).json({ success: true });
   } catch (err) {
@@ -475,61 +483,52 @@ app.post('/api/products/:id/reviews', (req, res) => {
 // 3. PERSISTENT CART & WISHLIST APIS
 // ==========================================
 
-app.get('/api/cart', authenticateToken, (req: AuthRequest, res) => {
+app.get('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const query = db.prepare('SELECT cart_items FROM carts WHERE user_id = ?');
-    const data = query.get(req.user!.id) as any;
+    const resDb = await db.query('SELECT cart_items FROM carts WHERE user_id = $1', [req.user!.id]);
+    const data = resDb.rows[0] as any;
     res.json(data ? JSON.parse(data.cart_items) : []);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve cart' });
   }
 });
 
-app.post('/api/cart', authenticateToken, (req: AuthRequest, res) => {
-  const { items } = req.body;
-  if (!items || !Array.isArray(items)) {
-    return res.status(400).json({ error: 'Items array required' });
-  }
-
+app.post('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const insert = db.prepare(`
-      INSERT OR REPLACE INTO carts (user_id, cart_items, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-    `);
-    insert.run(req.user!.id, JSON.stringify(items));
+    await db.query(`
+      INSERT INTO carts (user_id, cart_items) VALUES ($1, $2)
+      ON CONFLICT(user_id) DO UPDATE SET cart_items = EXCLUDED.cart_items, updated_at = CURRENT_TIMESTAMP
+    `, [req.user!.id, JSON.stringify(req.body.items)]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save cart state' });
   }
 });
 
-app.get('/api/wishlist', authenticateToken, (req: AuthRequest, res) => {
+app.get('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const items = db.prepare('SELECT product_id FROM wishlist WHERE user_id = ?').all(req.user!.id) as any[];
+    const resDb = await db.query('SELECT product_id FROM wishlist WHERE user_id = $1', [req.user!.id]);
+    const items = resDb.rows as any[];
     res.json(items.map(i => i.product_id));
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve wishlist' });
   }
 });
 
-app.post('/api/wishlist', authenticateToken, (req: AuthRequest, res) => {
-  const { productId } = req.body;
-  if (!productId) return res.status(400).json({ error: 'Product ID required' });
-
+app.post('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const insert = db.prepare('INSERT OR IGNORE INTO wishlist (user_id, product_id) VALUES (?, ?)');
-    insert.run(req.user!.id, productId);
+    const { productId } = req.body;
+    await db.query('INSERT INTO wishlist (user_id, product_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user!.id, productId]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update wishlist' });
   }
 });
 
-app.delete('/api/wishlist/:productId', authenticateToken, (req: AuthRequest, res) => {
+app.delete('/api/wishlist/:productId', authenticateToken, async (req: AuthRequest, res) => {
   const { productId } = req.params;
   try {
-    const del = db.prepare('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?');
-    del.run(req.user!.id, productId);
+    await db.query('DELETE FROM wishlist WHERE user_id = $1 AND product_id = $2', [req.user!.id, productId]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete wishlist item' });
@@ -540,137 +539,86 @@ app.delete('/api/wishlist/:productId', authenticateToken, (req: AuthRequest, res
 // 4. CHECKOUT & COUPON APIS
 // ==========================================
 
-app.post('/api/coupons/apply', (req, res) => {
-  const { code, cartTotal } = req.body;
-  if (!code || cartTotal === undefined) {
-    return res.status(400).json({ error: 'Coupon code and cartTotal required' });
+app.get('/api/coupons/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const resDb = await db.query('SELECT * FROM coupons WHERE code = $1 AND active = 1', [code.toUpperCase()]);
+    const coupon = resDb.rows[0] as any;
+    if (!coupon) return res.status(404).json({ error: 'Invalid or inactive coupon' });
+    res.json(coupon);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch coupon' });
   }
-
-  const query = db.prepare('SELECT * FROM coupons WHERE code = ? AND active = 1');
-  const coupon = query.get(code.toUpperCase()) as any;
-
-  if (!coupon) {
-    return res.status(400).json({ error: 'Invalid or deactivated coupon code' });
-  }
-
-  if (cartTotal < coupon.min_purchase) {
-    return res.status(400).json({ error: `Voucher requires a minimum purchase of ₹${coupon.min_purchase}` });
-  }
-
-  let discount = 0;
-  if (coupon.discount_type === 'flat') {
-    discount = coupon.discount_value;
-  } else if (coupon.discount_type === 'percent') {
-    discount = cartTotal * (coupon.discount_value / 100);
-  }
-
-  res.json({
-    code: coupon.code,
-    discount: Number(discount.toFixed(2)),
-    discountType: coupon.discount_type,
-    discountValue: coupon.discount_value
-  });
 });
 
 // ==========================================
 // 5. SECURE ORDER PLACEMENT APIS
 // ==========================================
 
-app.post('/api/orders', (req, res) => {
-  const {
-    userId, email, items, subtotal, tax, total,
-    shippingName, shippingAddress, shippingCity, shippingState, shippingZip, shippingCountry,
-    couponCode, paymentId
-  } = req.body;
-
-  if (!email || !items || !Array.isArray(items) || items.length === 0 || !total) {
-    return res.status(400).json({ error: 'Order validation failed: missing required fields' });
-  }
-
+app.post('/api/orders/checkout', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    // Stock verification for each item
-    for (const item of items) {
-      if (item.product?.id?.startsWith('bespoke-')) continue;
-      const prod = db.prepare('SELECT stock FROM products WHERE id = ?').get(item.product?.id) as any;
-      if (prod && prod.stock < item.quantity) {
-        return res.status(400).json({
-          error: `Insufficient stock for "${item.product?.name}" (only ${prod.stock} left)`
-        });
+    const userId = req.user!.id;
+    const { shipping, cart, subtotal, tax, total, couponCode, paymentId } = req.body;
+
+    if (!cart || cart.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+    // Enforce stock logic
+    for (const item of cart) {
+      const resDb = await db.query('SELECT stock FROM products WHERE id = $1', [item.product?.id]);
+      const prod = resDb.rows[0] as any;
+      if (!prod || prod.stock < item.quantity) {
+        return res.status(400).json({ error: `Not enough stock for ${item.product?.name}` });
       }
     }
 
     // Deduct stock
-    for (const item of items) {
-      if (item.product?.id?.startsWith('bespoke-')) continue;
-      db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?')
-        .run(item.quantity, item.product?.id);
+    for (const item of cart) {
+      await db.query('UPDATE products SET stock = GREATEST(0, stock - $1) WHERE id = $2', [item.quantity, item.product?.id]);
     }
 
-    // Create unique Order ID
-    const orderId = `YGT-${Math.floor(10000 + Math.random() * 90000)}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const insertOrder = db.prepare(`
+    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    await db.query(`
       INSERT INTO orders (id, user_id, email, status, subtotal, tax, total, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, coupon_code, payment_id)
-      VALUES (?, ?, ?, 'processing', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      VALUES ($1, $2, $3, 'processing', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `, [
+      orderId, userId, req.user!.email, subtotal, tax, total,
+      shipping.name, shipping.address, shipping.city, shipping.state, shipping.zip, shipping.country,
+      couponCode || null, paymentId || null
+    ]);
 
-    insertOrder.run(
-      orderId,
-      userId || null,
-      email,
-      subtotal,
-      tax,
-      total,
-      shippingName,
-      shippingAddress,
-      shippingCity,
-      shippingState,
-      shippingZip,
-      shippingCountry,
-      couponCode || null,
-      paymentId || `PAY-MOCK-${Date.now()}`
-    );
-
-    const insertOrderItem = db.prepare(`
-      INSERT INTO order_items (order_id, product_id, product_name, quantity, price, custom_config)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    for (const item of items) {
-      insertOrderItem.run(
-        orderId,
-        item.product?.id || 'unknown',
-        item.product?.name || 'Product',
-        item.quantity,
-        item.price,
-        item.customConfig ? JSON.stringify(item.customConfig) : null
-      );
+    for (const item of cart) {
+      await db.query(`
+        INSERT INTO order_items (order_id, product_id, product_name, quantity, price, custom_config)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, [
+        orderId, item.product?.id, item.product?.name, item.quantity,
+        item.product?.price, item.customConfig ? JSON.stringify(item.customConfig) : null
+      ]);
     }
 
-    // Clear saved cart on purchase if user was authenticated
-    if (userId) {
-      db.prepare('DELETE FROM carts WHERE user_id = ?').run(userId);
-    }
+    // Clear cart
+    await db.query('DELETE FROM carts WHERE user_id = $1', [userId]);
 
-    res.status(201).json({
-      success: true,
-      orderId,
-      estimatedDelivery: '2-3 Business Days via DHL Express'
-    });
+    res.json({ success: true, orderId });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to place order' });
   }
 });
 
-app.get('/api/orders/history', authenticateToken, (req: AuthRequest, res) => {
+app.get('/api/orders/history', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const orders = db.prepare('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC').all(req.user!.id) as any[];
-
-    const result = orders.map(order => {
-      const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id) as any[];
-      const enrichedItems = items.map(item => {
-        const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id) as any;
+    const resDb = await db.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [req.user!.id]);
+    const orders = resDb.rows as any[];
+    
+    const enrichedOrders = [];
+    for (let order of orders) {
+      const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
+      const items = itemsDb.rows as any[];
+      const enrichedItems = [];
+      for (let item of items) {
+        const productDb = await db.query('SELECT * FROM products WHERE id = $1', [item.product_id]);
+        const product = productDb.rows[0] as any;
         let finalProduct = product ? formatProduct(product) : {
           id: item.product_id,
           name: item.product_name || 'Product',
@@ -678,7 +626,7 @@ app.get('/api/orders/history', authenticateToken, (req: AuthRequest, res) => {
           price: item.price
         };
 
-        return {
+        enrichedItems.push({
           id: item.id,
           product: finalProduct,
           quantity: item.quantity,
@@ -686,11 +634,11 @@ app.get('/api/orders/history', authenticateToken, (req: AuthRequest, res) => {
           selectedMaterial: item.selected_material || null,
           selectedColor: { id: 'default', name: 'Default', bgClass: 'bg-gray-900' },
           price: item.price,
-          customConfig: item.custom_config ? JSON.parse(item.custom_config) : null
-        };
-      });
+          customConfig: item.custom_config ? typeof item.custom_config === 'string' ? JSON.parse(item.custom_config) : item.custom_config : null
+        });
+      }
 
-      return {
+      enrichedOrders.push({
         id: order.id,
         date: new Date(order.created_at).toLocaleDateString() + ' at ' + new Date(order.created_at).toLocaleTimeString(),
         status: order.status,
@@ -706,19 +654,40 @@ app.get('/api/orders/history', authenticateToken, (req: AuthRequest, res) => {
           country: order.shipping_country
         },
         items: enrichedItems
-      };
-    });
+      });
+    }
 
-    res.json(result);
+    res.json(enrichedOrders);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch order history' });
   }
 });
 
-app.post('/api/orders/:id/cancel', authenticateToken, (req: AuthRequest, res) => {
+app.get('/api/orders/:id', authenticateToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id) as any;
+    const resDb = await db.query('SELECT * FROM orders WHERE id = $1', [id]);
+    const order = resDb.rows[0] as any;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    // Verify ownership
+    if (order.user_id !== req.user!.id && req.user!.role !== 'admin') {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [id]);
+    res.json({ ...order, items: itemsDb.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch order details' });
+  }
+});
+
+app.post('/api/orders/:id/cancel', authenticateToken, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  try {
+    const resDb = await db.query('SELECT * FROM orders WHERE id = $1', [id]);
+    const order = resDb.rows[0] as any;
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     // Verify ownership
@@ -730,14 +699,13 @@ app.post('/api/orders/:id/cancel', authenticateToken, (req: AuthRequest, res) =>
       return res.status(400).json({ error: 'Order is already cancelled' });
     }
 
-    db.prepare("UPDATE orders SET status = 'cancelled' WHERE id = ?").run(id);
+    await db.query("UPDATE orders SET status = 'cancelled' WHERE id = $1", [id]);
 
     // Restore stock
-    const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(id) as any[];
-    for (const item of items) {
+    const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [id]);
+    for (const item of itemsDb.rows) {
       if (item.product_id?.startsWith('bespoke-')) continue;
-      db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
-        .run(item.quantity, item.product_id);
+      await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity, item.product_id]);
     }
 
     res.json({ success: true });
@@ -881,30 +849,35 @@ app.post('/api/verify-payment', (req: Request, res: Response) => {
 // 7. ADMIN DASHBOARD APIS
 // ==========================================
 
-// GET /api/admin/dashboard — Stats overview
-app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const totalSales = db.prepare("SELECT SUM(total) as sum FROM orders WHERE status != 'cancelled'").get() as any;
-    const totalOrders = db.prepare("SELECT COUNT(id) as count FROM orders").get() as any;
-    const totalCustomers = db.prepare("SELECT COUNT(id) as count FROM users WHERE role = 'customer'").get() as any;
-    const lowStockItems = db.prepare("SELECT COUNT(id) as count FROM products WHERE stock <= 5").get() as any;
+    const totalSalesDb = await db.query("SELECT SUM(total) as sum FROM orders WHERE status != 'cancelled'");
+    const totalSales = totalSalesDb.rows[0] as any;
+    const totalOrdersDb = await db.query("SELECT COUNT(id) as count FROM orders");
+    const totalOrders = totalOrdersDb.rows[0] as any;
+    const totalCustomersDb = await db.query("SELECT COUNT(id) as count FROM users WHERE role = 'customer'");
+    const totalCustomers = totalCustomersDb.rows[0] as any;
+    const lowStockItemsDb = await db.query("SELECT COUNT(id) as count FROM products WHERE stock <= 5");
+    const lowStockItems = lowStockItemsDb.rows[0] as any;
 
-    const salesHistory = db.prepare(`
-      SELECT DATE(created_at) as date, SUM(total) as amount, COUNT(id) as count
+    const salesHistoryDb = await db.query(`
+      SELECT DATE(created_at) as date, SUM(total) as daily_total
       FROM orders
       WHERE status != 'cancelled'
       GROUP BY DATE(created_at)
       ORDER BY date DESC
       LIMIT 7
-    `).all() as any[];
+    `);
+    const salesHistory = salesHistoryDb.rows as any[];
 
-    const lowStockList = db.prepare(`
-      SELECT id, name, stock, price, image_url, image_data
+    const lowStockListDb = await db.query(`
+      SELECT id, name, stock, price, image_url
       FROM products
       WHERE stock <= 5
       ORDER BY stock ASC
       LIMIT 10
-    `).all() as any[];
+    `);
+    const lowStockList = lowStockListDb.rows as any[];
 
     res.json({
       stats: {
@@ -914,10 +887,7 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
         lowStockAlerts: lowStockItems.count || 0
       },
       salesHistory,
-      lowStockList: lowStockList.map(p => ({
-        ...p,
-        image: p.image_data || p.image_url || ''
-      }))
+      lowStockList
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate dashboard metrics' });
@@ -925,9 +895,10 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // GET /api/admin/products — Admin full product list with stock
-app.get('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const products = db.prepare('SELECT * FROM products ORDER BY created_at DESC').all() as any[];
+    const resDb = await db.query('SELECT * FROM products ORDER BY created_at DESC');
+    const products = resDb.rows as any[];
     res.json(products.map(formatProduct));
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve product list' });
@@ -935,31 +906,23 @@ app.get('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // POST /api/admin/products — Admin adds a new product (with image upload)
-app.post('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
-  const { name, description, price, stock, category, image_data, image_url } = req.body;
-
-  if (!name || price === undefined || price < 0) {
-    return res.status(400).json({ error: 'Product name and price are required' });
-  }
-
+app.post('/api/admin/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
+    const { name, description, price, stock, category, image_data, image_url } = req.body;
+
+    if (!name || price === undefined || price < 0) {
+      return res.status(400).json({ error: 'Product name and price are required' });
+    }
+
     const id = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-    db.prepare(`
+    await db.query(`
       INSERT INTO products (id, name, description, price, stock, category, image_data, image_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      name.trim(),
-      description || '',
-      Number(price),
-      Number(stock) || 0,
-      category || 'general',
-      image_data || '',
-      image_url || ''
-    );
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, [id, name.trim(), description || '', Number(price), Number(stock) || 0, category || 'general', image_data || '', image_url || '']);
 
-    const created = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    const resDb = await db.query('SELECT * FROM products WHERE id = $1', [id]);
+    const created = resDb.rows[0] as any;
     res.status(201).json({ success: true, product: formatProduct(created) });
   } catch (err) {
     console.error('Create product error:', err);
@@ -968,31 +931,39 @@ app.post('/api/admin/products', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // PUT /api/admin/products/:id — Admin updates product details (including image)
-app.put('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) => {
-  const { id } = req.params;
-  const { name, description, price, category, image_data, image_url } = req.body;
-
-  if (!name || price === undefined || Number(price) < 0) {
-    return res.status(400).json({ error: 'Name and price are required' });
-  }
-
+app.put('/api/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const fieldsToUpdate: string[] = ['name = ?', 'description = ?', 'price = ?', 'category = ?', 'updated_at = CURRENT_TIMESTAMP'];
-    const values: any[] = [name.trim(), description || '', Number(price), category || 'general'];
+    const { id } = req.params;
+    const { name, description, price, category, image_data, image_url } = req.body;
+
+    if (!name || price === undefined || Number(price) < 0) {
+      return res.status(400).json({ error: 'Name and price are required' });
+    }
+
+    const fieldsToUpdate: string[] = [];
+    const values: any[] = [];
+    let paramIdx = 1;
+
+    fieldsToUpdate.push(`name = $${paramIdx++}`); values.push(name.trim());
+    fieldsToUpdate.push(`description = $${paramIdx++}`); values.push(description || '');
+    fieldsToUpdate.push(`price = $${paramIdx++}`); values.push(Number(price));
+    fieldsToUpdate.push(`category = $${paramIdx++}`); values.push(category || 'general');
+    fieldsToUpdate.push(`updated_at = CURRENT_TIMESTAMP`);
 
     if (image_data !== undefined) {
-      fieldsToUpdate.push('image_data = ?');
+      fieldsToUpdate.push(`image_data = $${paramIdx++}`);
       values.push(image_data);
     }
     if (image_url !== undefined) {
-      fieldsToUpdate.push('image_url = ?');
+      fieldsToUpdate.push(`image_url = $${paramIdx++}`);
       values.push(image_url);
     }
 
     values.push(id);
-    db.prepare(`UPDATE products SET ${fieldsToUpdate.join(', ')} WHERE id = ?`).run(...values);
+    await db.query(`UPDATE products SET ${fieldsToUpdate.join(', ')} WHERE id = $${paramIdx}`, values);
 
-    const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    const resDb = await db.query('SELECT * FROM products WHERE id = $1', [id]);
+    const updated = resDb.rows[0] as any;
     res.json({ success: true, product: formatProduct(updated) });
   } catch (err) {
     console.error('Update product error:', err);
@@ -1001,7 +972,7 @@ app.put('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) =
 });
 
 // PUT /api/admin/products/:id/stock — Admin restocks a product
-app.put('/api/admin/products/:id/stock', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/products/:id/stock', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { stock } = req.body;
 
@@ -1010,10 +981,10 @@ app.put('/api/admin/products/:id/stock', authenticateToken, requireAdmin, (req, 
   }
 
   try {
-    db.prepare('UPDATE products SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .run(Number(stock), id);
+    await db.query('UPDATE products SET stock = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [Number(stock), id]);
 
-    const updated = db.prepare('SELECT id, name, stock FROM products WHERE id = ?').get(id) as any;
+    const resDb = await db.query('SELECT id, name, stock FROM products WHERE id = $1', [id]);
+    const updated = resDb.rows[0] as any;
     res.json({ success: true, id, stock: updated?.stock });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update stock' });
@@ -1021,13 +992,14 @@ app.put('/api/admin/products/:id/stock', authenticateToken, requireAdmin, (req, 
 });
 
 // DELETE /api/admin/products/:id — Admin deletes a product
-app.delete('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
-    const product = db.prepare('SELECT id FROM products WHERE id = ?').get(id);
+    const resDb = await db.query('SELECT id FROM products WHERE id = $1', [id]);
+    const product = resDb.rows[0];
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
-    db.prepare('DELETE FROM products WHERE id = ?').run(id);
+    await db.query('DELETE FROM products WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete product' });
@@ -1035,28 +1007,30 @@ app.delete('/api/admin/products/:id', authenticateToken, requireAdmin, (req, res
 });
 
 // GET /api/admin/orders — All orders
-app.get('/api/admin/orders', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const orders = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all() as any[];
-    const result = orders.map(order => {
-      const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id) as any[];
-      return { ...order, items };
-    });
-    res.json(result);
+    const resDb = await db.query('SELECT * FROM orders ORDER BY created_at DESC');
+    const orders = resDb.rows as any[];
+    
+    for (let order of orders) {
+      const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
+      order.items = itemsDb.rows;
+    }
+    res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve orders' });
   }
 });
 
 // PUT /api/admin/orders/:id/status — Update order status
-app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
   if (!status) return res.status(400).json({ error: 'Status required' });
 
   try {
-    db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, id);
+    await db.query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
@@ -1064,27 +1038,28 @@ app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, (req, r
 });
 
 // GET /api/admin/coupons — All coupons
-app.get('/api/admin/coupons', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/coupons', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const coupons = db.prepare('SELECT * FROM coupons ORDER BY code ASC').all();
-    res.json(coupons);
+    const resDb = await db.query('SELECT * FROM coupons ORDER BY code ASC');
+    res.json(resDb.rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch coupons' });
   }
 });
 
 // POST /api/admin/coupons — Create new coupon
-app.post('/api/admin/coupons', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/coupons', authenticateToken, requireAdmin, async (req, res) => {
   const { code, discount_type, discount_value, min_purchase, expires_at } = req.body;
   if (!code || !discount_type || discount_value === undefined) {
     return res.status(400).json({ error: 'Code, type, and discount value required' });
   }
 
   try {
-    db.prepare(`
-      INSERT OR REPLACE INTO coupons (code, discount_type, discount_value, min_purchase, expires_at, active)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).run(code.toUpperCase(), discount_type, Number(discount_value), Number(min_purchase) || 0, expires_at || null);
+    await db.query(`
+      INSERT INTO coupons (code, discount_type, discount_value, min_purchase, expires_at, active)
+      VALUES ($1, $2, $3, $4, $5, 1)
+      ON CONFLICT(code) DO UPDATE SET discount_type = EXCLUDED.discount_type, discount_value = EXCLUDED.discount_value, min_purchase = EXCLUDED.min_purchase, expires_at = EXCLUDED.expires_at, active = 1
+    `, [code.toUpperCase(), discount_type, Number(discount_value), Number(min_purchase) || 0, expires_at || null]);
     res.status(201).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create coupon' });
@@ -1092,9 +1067,9 @@ app.post('/api/admin/coupons', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // DELETE /api/admin/coupons/:code — Delete coupon
-app.delete('/api/admin/coupons/:code', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/coupons/:code', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    db.prepare('DELETE FROM coupons WHERE code = ?').run(req.params.code.toUpperCase());
+    await db.query('DELETE FROM coupons WHERE code = $1', [req.params.code.toUpperCase()]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete coupon' });
@@ -1102,12 +1077,12 @@ app.delete('/api/admin/coupons/:code', authenticateToken, requireAdmin, (req, re
 });
 
 // Newsletter Subscriber
-app.post('/api/newsletter/subscribe', (req, res) => {
+app.post('/api/newsletter/subscribe', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   try {
-    db.prepare('INSERT OR IGNORE INTO newsletter_subscribers (email) VALUES (?)').run(email.toLowerCase());
+    await db.query('INSERT INTO newsletter_subscribers (email) VALUES ($1) ON CONFLICT DO NOTHING', [email.toLowerCase()]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Subscription failed' });
@@ -1140,5 +1115,20 @@ if (!process.env.VERCEL) {
     console.log(`[YOGANTAK API SERVER] listening on http://localhost:${PORT}`);
   });
 }
+
+// ==========================================
+// 9. GLOBAL ERROR HANDLER
+// ==========================================
+// Ensures that PayloadTooLargeError and SyntaxError return JSON instead of HTML stack traces
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON payload' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Payload too large. Please upload a smaller image.' });
+  }
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 export default app;

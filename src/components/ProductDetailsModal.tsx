@@ -296,15 +296,19 @@ export default function ProductDetailsModal({
                         id={`thumbBtn-${idx}`}
                       >
                         {thumbUrl === 'case-renderer' ? (
-                          <div className="origin-center scale-[0.27] h-12 w-12 flex items-center justify-center">
-                            <PhoneCaseRenderer
-                              model={activeModel}
-                              material={activeMaterial}
-                              color={activeColor}
-                              size="sm"
-                              magsafe={product.magsafe}
-                            />
-                          </div>
+                          (product.image && product.image !== 'custom' && (product.image.startsWith('http') || product.image.startsWith('data:'))) ? (
+                            <img src={product.image} alt="Thumbnail" className="w-full h-full object-cover rounded-lg" />
+                          ) : (
+                            <div className="origin-center scale-[0.27] h-12 w-12 flex items-center justify-center">
+                              <PhoneCaseRenderer
+                                model={activeModel}
+                                material={activeMaterial}
+                                color={activeColor}
+                                size="sm"
+                                magsafe={product.magsafe}
+                              />
+                            </div>
+                          )
                         ) : (
                           <img 
                             src={thumbUrl} 
@@ -334,15 +338,25 @@ export default function ProductDetailsModal({
 
                   {/* Render based on selected index */}
                   {activeThumbnailIndex === 0 ? (
-                    <div className="transform scale-[0.65] sm:scale-[0.78] hover:scale-[0.82] transition-transform duration-500 py-4 flex items-center justify-center">
-                      <PhoneCaseRenderer
-                        model={activeModel}
-                        material={activeMaterial}
-                        color={activeColor}
-                        size="lg"
-                        magsafe={product.magsafe}
-                      />
-                    </div>
+                    (product.image && product.image !== 'custom' && (product.image.startsWith('http') || product.image.startsWith('data:'))) ? (
+                      <div className="w-full h-full flex items-center justify-center py-4 px-6">
+                        <img 
+                          src={product.image} 
+                          alt={product.name} 
+                          className="max-w-full max-h-full object-contain drop-shadow-xl rounded-2xl" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="transform scale-[0.65] sm:scale-[0.78] hover:scale-[0.82] transition-transform duration-500 py-4 flex items-center justify-center">
+                        <PhoneCaseRenderer
+                          model={activeModel}
+                          material={activeMaterial}
+                          color={activeColor}
+                          size="lg"
+                          magsafe={product.magsafe}
+                        />
+                      </div>
+                    )
                   ) : activeThumbnailIndex === 1 ? (
                     <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center">
                       <img 
