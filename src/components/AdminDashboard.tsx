@@ -127,28 +127,28 @@ function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-[#0f0f14] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-[#fdfdfd]/80 backdrop-blur-3xl border border-neutral-200/60 rounded-[2rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            {product ? <Edit3 className="w-5 h-5 text-violet-400" /> : <Plus className="w-5 h-5 text-emerald-400" />}
+        <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+          <h2 className="text-xl font-extrabold text-neutral-900 flex items-center gap-2">
+            {product ? <Edit3 className="w-5 h-5 text-[#cfff71]" /> : <Plus className="w-5 h-5 text-[#cfff71]" />}
             {product ? 'Edit Product' : 'Add New Product'}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 flex items-center justify-center transition-colors">
-            <X className="w-4 h-4 text-white/60" />
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 font-sans">
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-2">Product Photo</label>
+            <label className="block text-sm font-bold text-neutral-700 mb-2">Product Photo</label>
             <div
-              className="relative border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-violet-500/60 transition-colors"
+              className="relative border-2 border-dashed border-neutral-200 rounded-2xl p-4 text-center cursor-pointer hover:border-neutral-400 bg-neutral-50 transition-colors"
               onDragOver={e => e.preventDefault()}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
@@ -158,20 +158,20 @@ function ProductModal({
                   <img
                     src={imagePreview}
                     alt="Preview"
-                    className="w-full max-h-48 object-contain rounded-lg mx-auto"
+                    className="w-full max-h-48 object-contain rounded-xl mx-auto shadow-sm bg-white"
                   />
                   <button
-                    className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
+                    className="absolute top-2 right-2 w-7 h-7 bg-white hover:bg-red-50 rounded-full flex items-center justify-center transition-colors shadow-md border border-neutral-200 text-red-500"
                     onClick={e => { e.stopPropagation(); setImageData(''); setImagePreview(''); }}
                   >
-                    <X className="w-3.5 h-3.5 text-white" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
                 <div className="py-6">
-                  <Upload className="w-10 h-10 text-white/30 mx-auto mb-3" />
-                  <p className="text-white/50 text-sm">Drag & drop or click to upload product image</p>
-                  <p className="text-white/30 text-xs mt-1">JPG, PNG, WebP — max 10MB</p>
+                  <Upload className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-500 text-sm font-semibold">Drag & drop or click to upload product image</p>
+                  <p className="text-neutral-400 text-xs mt-1 font-mono">JPG, PNG, WebP — max 10MB</p>
                 </div>
               )}
               <input
@@ -186,61 +186,61 @@ function ProductModal({
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1.5">Product Name *</label>
+            <label className="block text-sm font-bold text-neutral-700 mb-1.5">Product Name *</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Premium Leather Phone Case"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 focus:bg-white transition-colors font-semibold"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-white/60 mb-1.5">Description</label>
+            <label className="block text-sm font-bold text-neutral-700 mb-1.5">Description</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Describe this product..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/60 transition-colors resize-none"
+              className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 focus:bg-white transition-colors resize-none font-medium text-sm"
             />
           </div>
 
           {/* Price + Stock + Category row */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1.5">Price (₹) *</label>
+              <label className="block text-sm font-bold text-neutral-700 mb-1.5">Price (₹) *</label>
               <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 <input
                   type="number"
                   value={price}
                   onChange={e => setPrice(e.target.value)}
                   placeholder="999"
                   min="0"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-9 pr-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 focus:bg-white transition-colors font-semibold"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1.5">Stock Qty</label>
+              <label className="block text-sm font-bold text-neutral-700 mb-1.5">Stock Qty</label>
               <input
                 type="number"
                 value={stock}
                 onChange={e => setStock(e.target.value)}
                 placeholder="0"
                 min="0"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-violet-500/60 transition-colors"
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 focus:bg-white transition-colors font-semibold"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1.5">Category</label>
+              <label className="block text-sm font-bold text-neutral-700 mb-1.5">Category</label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/60 transition-colors"
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white transition-colors font-semibold cursor-pointer"
               >
                 <option value="phone-case">Phone Case</option>
                 <option value="accessories">Accessories</option>
@@ -252,9 +252,9 @@ function ProductModal({
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <p className="text-red-600 text-sm font-semibold">{error}</p>
             </div>
           )}
 
@@ -262,7 +262,7 @@ function ProductModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] disabled:opacity-50 disabled:cursor-not-allowed text-neutral-900 font-extrabold text-sm uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
           >
             {saving ? (
               <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</>
@@ -428,24 +428,24 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
   };
 
   const statusColor = (s: string) => {
-    if (s === 'processing') return 'text-amber-400 bg-amber-400/10 border-amber-400/30';
-    if (s === 'shipped') return 'text-blue-400 bg-blue-400/10 border-blue-400/30';
-    if (s === 'delivered') return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30';
-    if (s === 'cancelled') return 'text-red-400 bg-red-400/10 border-red-400/30';
-    return 'text-white/60 bg-white/5 border-white/10';
+    if (s === 'processing') return 'text-amber-600 bg-amber-50 border-amber-200';
+    if (s === 'shipped') return 'text-blue-600 bg-blue-50 border-blue-200';
+    if (s === 'delivered') return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+    if (s === 'cancelled') return 'text-red-600 bg-red-50 border-red-200';
+    return 'text-neutral-500 bg-neutral-100 border-neutral-200';
   };
 
   const stockColor = (s: number) => {
-    if (s === 0) return 'text-red-400';
-    if (s <= 5) return 'text-amber-400';
-    return 'text-emerald-400';
+    if (s === 0) return 'text-red-600';
+    if (s <= 5) return 'text-amber-600';
+    return 'text-emerald-600';
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9000] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-[#fdfdfd]/70 backdrop-blur-3xl z-[9000] flex flex-col overflow-hidden font-sans">
       {/* Toast */}
       {toastMsg && (
-        <div className="fixed top-6 right-6 z-[10000] bg-[#1a1a24] border border-white/20 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium animate-fade-in">
+        <div className="fixed top-6 right-6 z-[10000] bg-white border border-neutral-200 text-neutral-900 px-5 py-3 rounded-xl shadow-xl text-sm font-bold animate-fade-in flex items-center gap-2">
           {toastMsg}
         </div>
       )}
@@ -469,32 +469,32 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
       )}
 
       {/* Header */}
-      <div className="flex-shrink-0 bg-[#0a0a0f]/90 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      <div className="flex-shrink-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10 relative shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-[#cfff71] border border-[#bceb5e] flex items-center justify-center shadow-sm">
+            <Shield className="w-5 h-5 text-neutral-900" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Admin Dashboard</h1>
-            <p className="text-white/40 text-xs">Yogantak Control Panel</p>
+            <h1 className="text-xl font-extrabold text-neutral-900 tracking-tight">Admin Dashboard</h1>
+            <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider">Yogantak Control Panel</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={fetchAll}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all"
+            className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all shadow-sm cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 flex items-center justify-center transition-colors">
-            <X className="w-4 h-4 text-white/60" />
+          <button onClick={onClose} className="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors shadow-sm cursor-pointer border border-neutral-200">
+            <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
       </div>
 
       {/* Nav Tabs */}
-      <div className="flex-shrink-0 flex border-b border-white/10 px-6">
+      <div className="flex-shrink-0 flex bg-neutral-50 border-b border-neutral-200 px-6 overflow-x-auto">
         {[
           { id: 'overview', icon: BarChart2, label: 'Overview' },
           { id: 'products', icon: Package, label: 'Products & Inventory' },
@@ -504,10 +504,10 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-5 py-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap cursor-pointer ${
               activeTab === tab.id
-                ? 'border-violet-500 text-violet-400'
-                : 'border-transparent text-white/40 hover:text-white/70'
+                ? 'border-neutral-900 text-neutral-900'
+                : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/50'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -517,44 +517,51 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 bg-[#fdfdfd]">
 
         {/* ── OVERVIEW TAB ── */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-7xl mx-auto">
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`, icon: TrendingUp, color: 'from-emerald-600/20 to-teal-600/20 border-emerald-500/30' },
-                { label: 'Total Orders', value: stats?.ordersCount || 0, icon: ShoppingCart, color: 'from-blue-600/20 to-indigo-600/20 border-blue-500/30' },
-                { label: 'Customers', value: stats?.customersCount || 0, icon: Users, color: 'from-violet-600/20 to-purple-600/20 border-violet-500/30' },
-                { label: 'Low Stock Alerts', value: stats?.lowStockAlerts || 0, icon: Bell, color: 'from-amber-600/20 to-orange-600/20 border-amber-500/30' }
+                { label: 'Total Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`, icon: TrendingUp },
+                { label: 'Total Orders', value: stats?.ordersCount || 0, icon: ShoppingCart },
+                { label: 'Customers', value: stats?.customersCount || 0, icon: Users },
+                { label: 'Low Stock Alerts', value: stats?.lowStockAlerts || 0, icon: Bell }
               ].map((card, i) => (
-                <div key={i} className={`bg-gradient-to-br ${card.color} border rounded-xl p-4`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-white/50 text-xs font-medium">{card.label}</p>
-                    <card.icon className="w-4 h-4 text-white/40" />
+                <div key={i} className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-neutral-50 rounded-full translate-x-8 -translate-y-8 group-hover:bg-[#cfff71]/20 transition-colors pointer-events-none"></div>
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <p className="text-neutral-500 text-xs font-bold uppercase tracking-wider">{card.label}</p>
+                    <div className="p-2 bg-neutral-100 rounded-xl group-hover:bg-white group-hover:shadow-sm transition-all">
+                      <card.icon className="w-4 h-4 text-neutral-900" />
+                    </div>
                   </div>
-                  <p className="text-2xl font-bold text-white">{loading ? '—' : card.value}</p>
+                  <p className="text-2xl font-extrabold text-neutral-900 font-mono relative z-10">{loading ? '—' : card.value}</p>
                 </div>
               ))}
             </div>
 
             {/* Recent Sales */}
-            <div className="bg-white/3 border border-white/10 rounded-xl p-5">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-violet-400" />
+            <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-neutral-900 font-extrabold mb-5 flex items-center gap-2">
+                <div className="p-1.5 bg-[#cfff71] rounded-lg">
+                  <Sparkles className="w-4 h-4 text-neutral-900" />
+                </div>
                 Recent Sales (Last 7 Days)
               </h3>
               {salesHistory.length === 0 ? (
-                <p className="text-white/30 text-sm text-center py-4">No sales data yet</p>
+                <div className="text-center py-10 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <p className="text-neutral-400 text-sm font-semibold">No sales data yet</p>
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {salesHistory.map((day: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                      <span className="text-white/60 text-sm">{day.date}</span>
-                      <span className="text-white/50 text-sm">{day.count} orders</span>
-                      <span className="text-emerald-400 font-semibold text-sm">₹{Number(day.amount).toLocaleString('en-IN')}</span>
+                    <div key={i} className="flex items-center justify-between p-4 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 transition-colors">
+                      <span className="text-neutral-600 font-mono font-bold text-xs">{day.date}</span>
+                      <span className="text-neutral-500 text-xs font-bold uppercase tracking-wider bg-white px-2 py-1 rounded-md border border-neutral-200">{day.count} orders</span>
+                      <span className="text-neutral-900 font-extrabold font-mono text-sm">₹{Number(day.amount).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
                 </div>
@@ -565,16 +572,16 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
 
         {/* ── PRODUCTS TAB ── */}
         {activeTab === 'products' && (
-          <div className="space-y-5">
+          <div className="space-y-6 max-w-7xl mx-auto">
             {/* Add Product Button */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <h2 className="text-xl font-extrabold text-neutral-900">
                 Product Catalog
-                <span className="ml-2 text-sm text-white/40 font-normal">({products.length} products)</span>
+                <span className="ml-3 text-xs text-neutral-500 font-bold uppercase tracking-wider bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">{products.length} products</span>
               </h2>
               <button
                 onClick={() => { setModalProduct(null); setShowModal(true); }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg"
+                className="flex items-center gap-2 px-5 py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 Add New Product
@@ -582,25 +589,28 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
             </div>
 
             {loading ? (
-              <div className="text-center py-16 text-white/40">Loading products...</div>
+              <div className="text-center py-16 text-neutral-400 font-bold flex flex-col items-center gap-3">
+                <RefreshCw className="w-6 h-6 animate-spin text-neutral-300" />
+                Loading catalog...
+              </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-20 border-2 border-dashed border-white/10 rounded-2xl">
-                <Package className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                <h3 className="text-white/50 text-lg font-medium mb-2">No Products Yet</h3>
-                <p className="text-white/30 text-sm mb-6">Click "Add New Product" to list your first product on the storefront</p>
+              <div className="text-center py-20 bg-white border-2 border-dashed border-neutral-200 rounded-[2rem] shadow-sm">
+                <Package className="w-16 h-16 text-neutral-200 mx-auto mb-4" />
+                <h3 className="text-neutral-900 text-lg font-extrabold mb-2">No Products Yet</h3>
+                <p className="text-neutral-500 text-sm mb-6 font-medium">Click "Add New Product" to list your first product on the storefront</p>
                 <button
                   onClick={() => { setModalProduct(null); setShowModal(true); }}
-                  className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-medium transition-colors"
+                  className="px-6 py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
                 >
                   Add First Product
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {products.map(product => (
-                  <div key={product.id} className="bg-white/3 border border-white/10 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start">
+                  <div key={product.id} className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col sm:flex-row gap-5 items-start shadow-sm hover:shadow-md transition-shadow">
                     {/* Product Image */}
-                    <div className="w-full md:w-24 h-24 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                    <div className="w-full sm:w-28 h-32 rounded-xl overflow-hidden bg-neutral-50 flex-shrink-0 border border-neutral-100">
                       {product.image ? (
                         <img
                           src={product.image}
@@ -610,67 +620,71 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-8 h-8 text-white/20" />
+                          <Package className="w-8 h-8 text-neutral-300" />
                         </div>
                       )}
                     </div>
 
                     {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
-                        <h3 className="text-white font-semibold truncate">{product.name}</h3>
-                        <span className="text-xs text-white/40 bg-white/5 px-2 py-0.5 rounded-full w-fit">{product.category}</span>
+                    <div className="flex-1 min-w-0 w-full space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                        <div>
+                          <h3 className="text-neutral-900 font-extrabold truncate text-base">{product.name}</h3>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded-md inline-block mt-1">{product.category}</span>
+                        </div>
+                        <span className="text-neutral-900 font-extrabold font-mono text-lg bg-[#cfff71]/30 px-2 py-1 rounded-lg border border-[#cfff71]">₹{Number(product.price).toLocaleString('en-IN')}</span>
                       </div>
-                      <p className="text-white/40 text-sm line-clamp-1 mb-2">{product.description || 'No description'}</p>
-                      <div className="flex flex-wrap items-center gap-4">
-                        <span className="text-emerald-400 font-bold text-lg">₹{Number(product.price).toLocaleString('en-IN')}</span>
-                        <span className={`font-medium text-sm ${stockColor(product.stock)}`}>
+                      
+                      <p className="text-neutral-500 text-xs line-clamp-2 font-medium">{product.description || 'No description'}</p>
+                      
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <span className={`font-bold text-xs px-2 py-1 rounded-md border ${product.stock === 0 ? 'bg-red-50 text-red-600 border-red-200' : product.stock <= 5 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
                           {product.stock === 0 ? '⚠ Out of Stock' : `${product.stock} in stock`}
                         </span>
                         {product.rating !== undefined && (
-                          <span className="text-white/30 text-sm">★ {product.rating?.toFixed(1)} ({product.reviewsCount})</span>
+                          <span className="text-neutral-400 text-xs font-bold">★ {product.rating?.toFixed(1)} ({product.reviewsCount})</span>
                         )}
                       </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 w-full md:w-auto md:min-w-[200px]">
-                      {/* Restock row */}
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="Set stock to..."
-                          value={restockMap[product.id] || ''}
-                          onChange={e => setRestockMap(prev => ({ ...prev, [product.id]: e.target.value }))}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-violet-500/50 w-0"
-                        />
-                        <button
-                          onClick={() => handleRestock(product.id)}
-                          disabled={restockLoading[product.id] || !restockMap[product.id]}
-                          className="px-3 py-2 bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-40 text-white text-sm rounded-lg transition-colors flex items-center gap-1 shrink-0"
-                        >
-                          {restockLoading[product.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                          Restock
-                        </button>
-                      </div>
+                      {/* Actions inline */}
+                      <div className="pt-4 mt-2 border-t border-neutral-100 flex flex-col sm:flex-row gap-2 w-full">
+                        {/* Restock row */}
+                        <div className="flex gap-2 flex-1">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Qty..."
+                            value={restockMap[product.id] || ''}
+                            onChange={e => setRestockMap(prev => ({ ...prev, [product.id]: e.target.value }))}
+                            className="w-16 bg-neutral-50 border border-neutral-200 rounded-lg px-2 text-neutral-900 text-xs font-bold placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400"
+                          />
+                          <button
+                            onClick={() => handleRestock(product.id)}
+                            disabled={restockLoading[product.id] || !restockMap[product.id]}
+                            className="px-3 py-2 bg-neutral-900/80 backdrop-blur-sm hover:bg-neutral-900 disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1 shrink-0 cursor-pointer"
+                          >
+                            {restockLoading[product.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                            Add
+                          </button>
+                        </div>
 
-                      {/* Edit + Delete row */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => { setModalProduct(product); setShowModal(true); }}
-                          className="flex-1 px-3 py-2 bg-violet-600/50 hover:bg-violet-600/80 text-violet-300 text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id, product.name)}
-                          disabled={deleteLoading[product.id]}
-                          className="px-3 py-2 bg-red-600/30 hover:bg-red-600/60 disabled:opacity-40 text-red-400 hover:text-red-300 text-sm rounded-lg transition-colors flex items-center justify-center"
-                        >
-                          {deleteLoading[product.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
+                        {/* Edit + Delete row */}
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => { setModalProduct(product); setShowModal(true); }}
+                            className="px-3 py-2 bg-neutral-100/70 backdrop-blur-sm hover:bg-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-neutral-200/50"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(product.id, product.name)}
+                            disabled={deleteLoading[product.id]}
+                            className="px-3 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-40 text-red-600 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center cursor-pointer border border-red-100"
+                          >
+                            {deleteLoading[product.id] ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -682,79 +696,89 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
 
         {/* ── ORDERS TAB ── */}
         {activeTab === 'orders' && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-white mb-2">
+          <div className="space-y-4 max-w-7xl mx-auto">
+            <h2 className="text-xl font-extrabold text-neutral-900 mb-4">
               All Orders
-              <span className="ml-2 text-sm text-white/40 font-normal">({orders.length} total)</span>
+              <span className="ml-3 text-xs text-neutral-500 font-bold uppercase tracking-wider bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">{orders.length} total</span>
             </h2>
             {orders.length === 0 ? (
-              <div className="text-center py-16 text-white/30">No orders yet</div>
-            ) : orders.map(order => (
-              <div key={order.id} className="bg-white/3 border border-white/10 rounded-xl overflow-hidden">
-                <div className="flex flex-col md:flex-row md:items-center gap-3 p-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-white font-mono font-semibold text-sm">{order.id}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusColor(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </div>
-                    <p className="text-white/40 text-sm">{order.email}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-emerald-400 font-bold">₹{Number(order.total).toLocaleString('en-IN')}</span>
-                    <select
-                      value={order.status}
-                      onChange={e => handleOrderStatus(order.id, e.target.value)}
-                      className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-2 py-1.5 focus:outline-none"
-                    >
-                      {['processing', 'shipped', 'delivered', 'cancelled'].map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                      className="text-white/40 hover:text-white transition-colors"
-                    >
-                      {expandedOrder === order.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                {expandedOrder === order.id && order.items?.length > 0 && (
-                  <div className="border-t border-white/5 px-4 pb-4 pt-3 space-y-2">
-                    {order.items.map((item: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between text-sm text-white/50">
-                        <span>{item.product_name || item.product?.name || 'Product'} ×{item.quantity}</span>
-                        <span>₹{Number(item.price).toLocaleString('en-IN')}</span>
+              <div className="text-center py-16 bg-white border border-neutral-200 rounded-2xl shadow-sm text-neutral-400 font-bold">No orders yet</div>
+            ) : (
+              <div className="space-y-3">
+                {orders.map(order => (
+                  <div key={order.id} className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 p-5">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <span className="text-neutral-900 font-mono font-extrabold text-sm bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">{order.id}</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${statusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        <p className="text-neutral-500 text-xs font-mono">{order.email}</p>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-4 md:w-auto w-full justify-between md:justify-end">
+                        <span className="text-neutral-900 font-extrabold font-mono text-lg">₹{Number(order.total).toLocaleString('en-IN')}</span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={order.status}
+                            onChange={e => handleOrderStatus(order.id, e.target.value)}
+                            className="bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-wider rounded-lg px-2.5 py-2 focus:outline-none focus:border-neutral-400 cursor-pointer shadow-sm"
+                          >
+                            {['processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                            className="p-2 text-neutral-400 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors cursor-pointer"
+                          >
+                            {expandedOrder === order.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {expandedOrder === order.id && order.items?.length > 0 && (
+                      <div className="border-t border-neutral-100 bg-neutral-50 px-5 pb-5 pt-4 space-y-3">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-2">Order Items</h4>
+                        {order.items.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between text-sm bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
+                            <span className="font-bold text-neutral-700">{item.product_name || item.product?.name || 'Product'} <span className="text-neutral-400 ml-2 text-xs">×{item.quantity}</span></span>
+                            <span className="font-mono font-extrabold text-neutral-900">₹{Number(item.price).toLocaleString('en-IN')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
         {/* ── COUPONS TAB ── */}
         {activeTab === 'coupons' && (
-          <div className="space-y-5">
+          <div className="space-y-6 max-w-7xl mx-auto">
             {/* Create Coupon */}
-            <div className="bg-white/3 border border-white/10 rounded-xl p-5">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Tag className="w-4 h-4 text-violet-400" /> Create New Coupon
+            <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-neutral-900 font-extrabold mb-5 flex items-center gap-2">
+                <div className="p-1.5 bg-[#cfff71] rounded-lg">
+                  <Tag className="w-4 h-4 text-neutral-900" />
+                </div>
+                Create New Coupon
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <input
                   type="text"
                   placeholder="Coupon Code"
                   value={couponForm.code}
                   onChange={e => setCouponForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/50"
+                  className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-900 font-mono font-bold text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 shadow-inner-sm uppercase"
                 />
                 <select
                   value={couponForm.discount_type}
                   onChange={e => setCouponForm(p => ({ ...p, discount_type: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
+                  className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-900 font-bold text-sm focus:outline-none focus:border-neutral-400 shadow-inner-sm cursor-pointer"
                 >
                   <option value="percent">Percent (%)</option>
                   <option value="flat">Flat (₹)</option>
@@ -764,40 +788,41 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
                   placeholder="Value"
                   value={couponForm.discount_value}
                   onChange={e => setCouponForm(p => ({ ...p, discount_value: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/50"
+                  className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-900 font-bold text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 shadow-inner-sm"
                 />
                 <input
                   type="number"
                   placeholder="Min Purchase (₹)"
                   value={couponForm.min_purchase}
                   onChange={e => setCouponForm(p => ({ ...p, min_purchase: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/50"
+                  className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-900 font-bold text-sm placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 shadow-inner-sm"
                 />
               </div>
               <button
                 onClick={handleCreateCoupon}
-                className="px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                className="px-6 py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 text-xs uppercase tracking-wider font-extrabold rounded-xl transition-colors flex items-center gap-2 shadow-sm cursor-pointer active:scale-[0.98] w-full sm:w-auto justify-center"
               >
                 <Plus className="w-4 h-4" /> Create Coupon
               </button>
             </div>
 
             {/* Coupon List */}
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 mb-2 px-2">Active Coupons</h4>
               {coupons.length === 0 ? (
-                <div className="text-center py-10 text-white/30 text-sm">No coupons created yet</div>
+                <div className="text-center py-10 bg-white border border-neutral-200 rounded-2xl text-neutral-400 text-sm font-bold shadow-sm">No coupons created yet</div>
               ) : coupons.map(coupon => (
-                <div key={coupon.code} className="flex items-center justify-between bg-white/3 border border-white/10 rounded-xl px-4 py-3">
-                  <div>
-                    <span className="text-white font-mono font-bold">{coupon.code}</span>
-                    <span className="ml-3 text-white/50 text-sm">
+                <div key={coupon.code} className="flex items-center justify-between bg-white border border-neutral-200 rounded-xl px-5 py-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                    <span className="text-neutral-900 font-mono font-extrabold text-lg">{coupon.code}</span>
+                    <span className="text-neutral-600 font-bold text-sm bg-neutral-100 px-2.5 py-1 rounded-md border border-neutral-200">
                       {coupon.discount_type === 'percent' ? `${coupon.discount_value}% off` : `₹${coupon.discount_value} off`}
-                      {coupon.min_purchase > 0 && ` (min ₹${coupon.min_purchase})`}
+                      {coupon.min_purchase > 0 && <span className="text-neutral-400 text-xs ml-1">(min ₹${coupon.min_purchase})</span>}
                     </span>
                   </div>
                   <button
                     onClick={() => handleDeleteCoupon(coupon.code)}
-                    className="p-1.5 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    className="p-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

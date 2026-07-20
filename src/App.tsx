@@ -3,7 +3,7 @@ import { Product, CartItem, Order, PhoneModel, CaseMaterial, CaseColor } from '.
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Navbar from './components/Navbar';
-import HeroSection from './components/HeroSection';
+import BentoHeroSection from './components/BentoHeroSection';
 import FilterSidebar from './components/FilterSidebar';
 import ProductCard from './components/ProductCard';
 import ProductDetailsModal from './components/ProductDetailsModal';
@@ -544,17 +544,9 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col bg-[#131315] font-sans antialiased text-[#e4e2e4] relative overflow-x-hidden"
-      style={{
-        background: 'radial-gradient(circle at 80% 20%, rgba(233, 195, 73, 0.06) 0%, transparent 55%), radial-gradient(circle at 20% 80%, rgba(173, 198, 255, 0.07) 0%, transparent 55%), #131315'
-      }}
+      className="min-h-screen flex flex-col bg-[#f4f5f1] font-sans antialiased text-neutral-900 relative overflow-x-hidden"
     >
       
-      {/* Scroll-driven Video Showcase Header at the very top of catalog tab */}
-      {activeTab === 'catalog' && (
-        <ScrollVideoHeader onSkip={handleScrollPastVideo} />
-      )}
-
       {/* Primary header navbar controls */}
       <Navbar
         activeTab={activeTab}
@@ -566,9 +558,9 @@ export default function App() {
         onAccountClick={() => setIsAuthModalOpen(true)}
       />
 
-      {/* Hero Display Header - Only active under core Catalog overview */}
+      {/* Bento Box Hero Display - Only active under core Catalog overview */}
       {activeTab === 'catalog' && (
-        <HeroSection
+        <BentoHeroSection
           onExploreClick={handleScrollToCatalog}
           onStudioClick={() => {
             setLabPreset(undefined);
@@ -587,27 +579,27 @@ export default function App() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               
               {/* Title Section */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-neutral-800/60 pb-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-neutral-200 pb-6">
                 <div>
-                  <h1 className="text-3xl sm:text-4xl font-serif font-extrabold tracking-tight text-white headline-lg">
+                  <h1 className="text-3xl sm:text-4xl font-sans font-extrabold tracking-tight text-neutral-900 headline-lg">
                     Mobile Cases
                   </h1>
-                  <p className="text-neutral-400 text-sm mt-1.5">
+                  <p className="text-neutral-500 text-sm mt-1.5 font-medium">
                     Style meets protection. Find the perfect case for your device.
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-neutral-450 shrink-0">
-                  <span className="font-semibold text-white">{getFilteredProducts().length} Products</span>
-                  <div className="h-4 w-px bg-neutral-800" />
+                <div className="flex items-center gap-4 text-sm text-neutral-500 shrink-0">
+                  <span className="font-bold text-neutral-900">{getFilteredProducts().length} Products</span>
+                  <div className="h-4 w-px bg-neutral-300" />
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-neutral-450">Sort by:</span>
+                    <span className="text-xs text-neutral-500 font-bold">Sort by:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => {
                         setSortBy(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="bg-[#18181b] border border-neutral-800 text-white rounded-xl px-3 py-1.5 font-semibold focus:outline-none focus:border-[#adc6ff] cursor-pointer text-xs"
+                      className="bg-white border border-neutral-200 text-neutral-900 rounded-full px-4 py-1.5 font-bold focus:outline-none focus:border-neutral-400 cursor-pointer text-xs shadow-sm"
                     >
                       <option value="featured">Featured</option>
                       <option value="price-asc">Price: Low to High</option>
@@ -619,17 +611,17 @@ export default function App() {
               </div>
 
               {/* Category Pills Row */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none border-b border-neutral-900">
+              <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none border-b border-neutral-200">
                 {CATEGORIES.map((cat) => {
                   const isActive = activeCategory === cat.id;
                   return (
                     <button
                       key={cat.id}
                       onClick={() => handleCategoryClick(cat.id)}
-                      className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                         isActive
-                          ? 'bg-[#adc6ff] text-[#002e69] shadow-sm font-bold'
-                          : 'bg-white/5 border border-white/10 text-[#c1c6d7] hover:border-white/20 hover:text-white'
+                          ? 'bg-neutral-900/85 backdrop-blur-sm text-white shadow-md'
+                          : 'bg-white/70 backdrop-blur-sm border border-neutral-200/50 text-neutral-500 hover:border-neutral-300 hover:text-neutral-900 shadow-sm'
                       }`}
                     >
                       {cat.label}
@@ -641,21 +633,21 @@ export default function App() {
               {/* Main Content: Full-width Product Grid */}
               <div className="flex flex-col gap-8">
                   {/* Grid header row */}
-                  <div className="flex items-center justify-between border-b border-neutral-850 pb-3">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                  <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                       {getFilteredProducts().length} products found
                     </span>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => setGridView('grid')} 
-                        className={`p-1.5 rounded transition-colors cursor-pointer ${gridView === 'grid' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-white'}`}
+                        className={`p-1.5 rounded transition-all cursor-pointer ${gridView === 'grid' ? 'bg-neutral-100/70 backdrop-blur-sm text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-900'}`}
                         title="Grid View"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                       </button>
                       <button 
                         onClick={() => setGridView('list')} 
-                        className={`p-1.5 rounded transition-colors cursor-pointer ${gridView === 'list' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:text-white'}`}
+                        className={`p-1.5 rounded transition-all cursor-pointer ${gridView === 'list' ? 'bg-neutral-100/70 backdrop-blur-sm text-neutral-900 shadow-sm' : 'text-neutral-400 hover:text-neutral-900'}`}
                         title="List View"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -665,34 +657,34 @@ export default function App() {
 
                   {/* Grid / List of products */}
                   {productsLoading ? (
-                    <div className="py-24 flex flex-col items-center justify-center gap-4 text-white/40">
-                      <div className="w-10 h-10 border-2 border-white/20 border-t-violet-500 rounded-full animate-spin" />
-                      <p className="text-sm">Loading catalog...</p>
+                    <div className="py-24 flex flex-col items-center justify-center gap-4 text-neutral-400">
+                      <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+                      <p className="text-sm font-bold">Loading catalog...</p>
                     </div>
                   ) : products.length === 0 ? (
-                    <div className="bg-[#18181b]/50 border border-neutral-850 rounded-3xl py-24 text-center space-y-4 shadow-xl backdrop-blur-md">
-                      <svg className="w-14 h-14 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="bg-white border border-neutral-200 rounded-[2rem] py-24 text-center space-y-4 shadow-sm">
+                      <svg className="w-14 h-14 text-neutral-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
                       <div className="space-y-1.5">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-white">No Products Yet</h3>
-                        <p className="text-xs text-neutral-450 font-mono uppercase tracking-widest max-w-sm mx-auto">
+                        <h3 className="text-base font-extrabold tracking-tight text-neutral-900">No Products Yet</h3>
+                        <p className="text-sm text-neutral-500 max-w-sm mx-auto">
                           The catalog is empty. Log in as admin to add products.
                         </p>
                       </div>
                     </div>
                   ) : getFilteredProducts().length === 0 ? (
-                    <div className="bg-[#18181b]/50 border border-neutral-850 rounded-3xl py-24 text-center space-y-4 shadow-xl backdrop-blur-md">
-                      <Sliders className="w-10 h-10 text-neutral-500 mx-auto" />
+                    <div className="bg-white border border-neutral-200 rounded-[2rem] py-24 text-center space-y-4 shadow-sm">
+                      <Sliders className="w-10 h-10 text-neutral-300 mx-auto" />
                       <div className="space-y-1.5">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-white">No custom fits match</h3>
-                        <p className="text-xs text-neutral-450 font-mono uppercase tracking-widest max-w-sm mx-auto">
-                          Ease filter constraints or reset preferences to discover core fits.
+                        <h3 className="text-base font-extrabold tracking-tight text-neutral-900">No matching cases found</h3>
+                        <p className="text-sm text-neutral-500 max-w-sm mx-auto">
+                          Ease your filter constraints or reset preferences to discover our core collection.
                         </p>
                       </div>
                       <button
                         onClick={handleResetFilters}
-                        className="px-6 py-2.5 bg-[#adc6ff] text-[#002e69] hover:bg-[#adc6ff]/90 font-mono text-[10px] uppercase tracking-widest font-bold rounded-full transition-all cursor-pointer shadow-md"
+                        className="px-6 py-3 bg-[#cfff71]/80 backdrop-blur-sm text-neutral-900 hover:bg-[#cfff71] text-xs font-bold rounded-full transition-all cursor-pointer shadow-sm"
                       >
                         Reset All Filters
                       </button>
@@ -719,8 +711,8 @@ export default function App() {
 
                   {/* Pagination control */}
                   {getFilteredProducts().length > productsPerPage && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-900 pt-6 mt-4">
-                      <span className="text-xs text-neutral-400 font-semibold">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-200 pt-6 mt-4">
+                      <span className="text-xs text-neutral-500 font-bold">
                         Showing {startIndex + 1}-{Math.min(endIndex, getFilteredProducts().length)} of {getFilteredProducts().length} products
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -730,7 +722,7 @@ export default function App() {
                             setCurrentPage(prev => Math.max(1, prev - 1));
                             window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                           }}
-                          className="p-2 border border-neutral-800 bg-white/5 rounded-lg hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-2 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-sm"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
@@ -744,10 +736,10 @@ export default function App() {
                                 setCurrentPage(pageNum);
                                 window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                               }}
-                              className={`w-9 h-9 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                              className={`w-9 h-9 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
                                 isCurrent
-                                  ? 'bg-[#adc6ff] border-[#adc6ff] text-[#002e69] shadow-sm shadow-[#adc6ff]/10 font-bold'
-                                  : 'bg-white/5 border-neutral-800 text-neutral-300 hover:bg-white/10 hover:text-white'
+                                  ? 'bg-neutral-900/85 backdrop-blur-sm border-neutral-900 text-white shadow-sm shadow-neutral-900/20'
+                                  : 'bg-white/70 backdrop-blur-sm border-neutral-200/50 text-neutral-600 hover:bg-white hover:text-neutral-900 shadow-sm'
                               }`}
                             >
                               {pageNum}
@@ -760,7 +752,7 @@ export default function App() {
                             setCurrentPage(prev => Math.min(totalPages, prev + 1));
                             window.scrollTo({ top: catalogRef.current?.offsetTop || 0, behavior: 'smooth' });
                           }}
-                          className="p-2 border border-neutral-800 bg-white/5 rounded-lg hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="p-2 border border-neutral-200 bg-white rounded-lg hover:bg-neutral-50 text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-sm"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -770,18 +762,18 @@ export default function App() {
               </div>
 
               {/* Bottom Features Banner */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 border-t border-neutral-900 pt-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 border-t border-neutral-200 pt-12">
                 {[
                   { title: 'Free Shipping', desc: 'On orders over $50', icon: '🚚' },
                   { title: '30-Day Returns', desc: 'Hassle-free returns', icon: '🔄' },
                   { title: 'Secure Payment', desc: '100% secure checkout', icon: '🔒' },
                   { title: '24/7 Support', desc: "We're here to help", icon: '📞' }
                 ].map((feat) => (
-                  <div key={feat.title} className="bg-[#18181b]/50 border border-neutral-850 rounded-2xl p-5 flex items-start gap-4 shadow-md hover:shadow-lg hover:border-neutral-700/80 transition-all duration-300">
+                  <div key={feat.title} className="bg-white border border-neutral-200 rounded-[1.5rem] p-5 flex items-start gap-4 shadow-sm hover:shadow-md transition-all duration-300">
                     <span className="text-3xl leading-none">{feat.icon}</span>
                     <div>
-                      <h4 className="font-bold text-white text-sm leading-tight">{feat.title}</h4>
-                      <p className="text-neutral-400 text-xs mt-1 leading-normal">{feat.desc}</p>
+                      <h4 className="font-bold text-neutral-900 text-sm leading-tight">{feat.title}</h4>
+                      <p className="text-neutral-500 text-xs mt-1 leading-normal">{feat.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -862,19 +854,19 @@ export default function App() {
       />
 
       {/* Elegant aesthetic bottom footnote */}
-      <footer className="bg-[#0e0e10] text-[#e4e2e4] py-16 border-t border-neutral-800/40 mt-16 font-mono text-[11px]">
+      <footer className="bg-white text-neutral-600 py-16 border-t border-neutral-200 mt-16 font-sans text-[13px] rounded-t-[3rem] shadow-[0_-4px_20px_rgb(0,0,0,0.02)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           
           <div className="space-y-3">
-            <span className="font-sans text-lg font-black tracking-tighter uppercase text-white block italic">YOGANTAK.</span>
-            <p className="text-[#c1c6d7] leading-relaxed font-sans text-xs">
+            <span className="font-sans text-xl font-black tracking-tight text-neutral-900 block italic">YOGANTAK.</span>
+            <p className="text-neutral-500 leading-relaxed font-sans text-xs">
               Meticulous casing shells built on durability, tactile beauty, and eco-sustainable accountability. Protecting global devices with certified military drop-guards of absolute elite form-factors.
             </p>
           </div>
 
           <div className="space-y-2">
-            <span className="text-white font-bold block uppercase tracking-wider">SECURE LOGISTICS</span>
-            <div className="flex flex-col gap-1 text-[#c1c6d7]">
+            <span className="text-neutral-900 font-bold block uppercase tracking-wider text-xs">SECURE LOGISTICS</span>
+            <div className="flex flex-col gap-1 text-neutral-500 text-xs">
               <span>PCI-DSS direct security certified</span>
               <span>AES-256 Bit double handshakes active</span>
               <span>Complimentary expedited shipping worldwide</span>
@@ -882,20 +874,20 @@ export default function App() {
           </div>
 
           <div className="space-y-2">
-            <span className="text-white font-bold block uppercase tracking-wider">CLIENT RELATIONS</span>
-            <div className="flex flex-col gap-1 text-[#c1c6d7]">
+            <span className="text-neutral-900 font-bold block uppercase tracking-wider text-xs">CLIENT RELATIONS</span>
+            <div className="flex flex-col gap-1 text-neutral-500 text-xs">
               <span>Email: concierge@yogantak.com</span>
               <span>Support Desk: 1-800-YOGANTAK</span>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 font-bold uppercase tracking-wider text-[10px]">
-                <button onClick={() => setActiveTab('about')} className="hover:text-white transition-colors cursor-pointer">About Us</button>
-                <button onClick={() => setActiveTab('contact')} className="hover:text-white transition-colors cursor-pointer">Contact Us</button>
-                <button onClick={() => setActiveTab('terms')} className="hover:text-white transition-colors cursor-pointer">Terms & Conditions</button>
-                <button onClick={() => setActiveTab('privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy Policy</button>
-                <button onClick={() => setActiveTab('cancellation')} className="hover:text-white transition-colors cursor-pointer">Cancellation & Refund</button>
-                <button onClick={() => setActiveTab('shipping')} className="hover:text-white transition-colors cursor-pointer">Shipping & Exchange</button>
-                <button onClick={() => setActiveTab('returns')} className="hover:text-white transition-colors cursor-pointer">Returns Policy</button>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 font-bold text-[11px]">
+                <button onClick={() => setActiveTab('about')} className="hover:text-neutral-900 transition-colors cursor-pointer">About Us</button>
+                <button onClick={() => setActiveTab('contact')} className="hover:text-neutral-900 transition-colors cursor-pointer">Contact Us</button>
+                <button onClick={() => setActiveTab('terms')} className="hover:text-neutral-900 transition-colors cursor-pointer">Terms & Conditions</button>
+                <button onClick={() => setActiveTab('privacy')} className="hover:text-neutral-900 transition-colors cursor-pointer">Privacy Policy</button>
+                <button onClick={() => setActiveTab('cancellation')} className="hover:text-neutral-900 transition-colors cursor-pointer">Cancellation & Refund</button>
+                <button onClick={() => setActiveTab('shipping')} className="hover:text-neutral-900 transition-colors cursor-pointer">Shipping & Exchange</button>
+                <button onClick={() => setActiveTab('returns')} className="hover:text-neutral-900 transition-colors cursor-pointer">Returns Policy</button>
               </div>
-              <span className="mt-2 text-neutral-500">Designed in minimalist creative workspaces. All rights reserved. • 2026</span>
+              <span className="mt-2 text-neutral-400 text-xs">Designed in minimalist creative workspaces. All rights reserved. • 2026</span>
             </div>
           </div>
 

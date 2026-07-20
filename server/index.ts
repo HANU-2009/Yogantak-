@@ -4,10 +4,13 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { db, initSchema } from './db.js';
-import { adminAuth } from './firebase.js';
+import { adminAuth, adminDb } from './firebase.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import https from 'https';
+
+// --- Enterprise Backend ---
+import { app as enterpriseApp } from './enterprise-backend/app';
 
 // Initialize DB schema on startup
 initSchema();
@@ -38,31 +41,45 @@ async function syncUserToDB(email: string, name: string): Promise<{ user: any; c
   const isAdmin = envAdmins.includes(email.toLowerCase()) || defaultAdmins.includes(email.toLowerCase());
   const targetRole = isAdmin ? 'admin' : 'customer';
 
-  const res = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-  let user = res.rows[0];
+  // If Firebase Admin isn't initialized yet, return mock data
+  if (!adminDb) {
+    console.warn('[DEV MODE] Firebase not initialized. Using mock user data.');
+    return {
+      user: { id: email, email, fullName: name || email.split('@')[0], role: targetRole },
+      cart: []
+    };
+  }
+
+  const userRef = adminDb.collection('users').doc(email);
+  const doc = await userRef.get();
   
-  if (!user) {
+  let user: any;
+  let cart: any[] = [];
+
+  if (!doc.exists) {
     const fullName = name || email.split('@')[0];
-    await db.query(`
-      INSERT INTO users (email, password_hash, full_name, role)
-      VALUES ($1, 'firebase_managed', $2, $3)
-    `, [email, fullName, targetRole]);
-    const res2 = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    user = res2.rows[0];
+    user = {
+      id: email, // Using email as the ID
+      email: email,
+      fullName: fullName,
+      role: targetRole,
+      createdAt: new Date().toISOString(),
+      cart: []
+    };
+    await userRef.set(user);
   } else {
+    user = doc.data();
+    cart = user.cart || [];
+    
     // If the user's role should be upgraded based on admin list
     if (user.role !== targetRole) {
-      await db.query('UPDATE users SET role = $1 WHERE id = $2', [targetRole, user.id]);
+      await userRef.update({ role: targetRole });
       user.role = targetRole;
     }
   }
 
-  const cartRes = await db.query('SELECT cart_items FROM carts WHERE user_id = $1', [user.id]);
-  const cartData = cartRes.rows[0] as any;
-  const cart = cartData ? JSON.parse(cartData.cart_items) : [];
-
   return {
-    user: { id: user.id, email: user.email, fullName: user.full_name, role: user.role },
+    user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
     cart
   };
 }
@@ -137,13 +154,7 @@ app.use((req, res, next) => {
 
 // Auth Middleware
 export interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    role: string;
-    fullName: string;
-    name?: string;
-  };
+  user?: any;
 }
 
 async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
@@ -175,9 +186,14 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
       return;
     }
 
-    // Look up the user in our local Postgres database by email
-    const resDb = await db.query('SELECT id, email, role, full_name as fullName FROM users WHERE email = $1', [email]);
-    const user = resDb.rows[0];
+    // Look up the user in Firestore by email
+    let user: any = null;
+    if (adminDb) {
+      const doc = await adminDb.collection('users').doc(email).get();
+      if (doc.exists) {
+        user = doc.data();
+      }
+    }
 
     if (!user) {
       // Auto-sync unknown user on token validation
@@ -192,10 +208,10 @@ async function authenticateToken(req: AuthRequest, res: Response, next: NextFunc
     }
 
     req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      fullName: user.fullName
+      id: user.id || email,
+      email: user.email || email,
+      role: user.role || 'customer',
+      fullName: user.fullName || ''
     };
     next();
   } catch (error) {
@@ -209,6 +225,9 @@ function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   }
   next();
 }
+
+// Mount Enterprise Backend
+app.use('/api/enterprise', enterpriseApp);
 
 // ==========================================
 // 1. FIREBASE AUTHENTICATION SYNC
@@ -438,8 +457,12 @@ app.get('/api/products/:id', async (req, res) => {
 app.get('/api/products/:id/reviews', async (req, res) => {
   try {
     const { id } = req.params;
-    const resDb = await db.query('SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC', [id]);
-    const reviews = resDb.rows;
+    if (!adminDb) return res.json([]);
+    const snapshot = await adminDb.collection('reviews')
+      .where('productId', '==', id)
+      .orderBy('createdAt', 'desc')
+      .get();
+    const reviews = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
     res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch reviews' });
@@ -455,24 +478,28 @@ app.post('/api/products/:id/reviews', async (req, res) => {
   }
 
   try {
-    await db.query(`
-      INSERT INTO reviews (product_id, reviewer_name, rating, comment)
-      VALUES ($1, $2, $3, $4)
-    `, [id, reviewerName, rating, comment]);
-
-    // Update product overall rating metrics
-    const statsRes = await db.query(`
-      SELECT AVG(rating) as avgRating, COUNT(id) as countReviews
-      FROM reviews WHERE product_id = $1
-    `, [id]);
-    const stats = statsRes.rows[0] as any;
-
-    await db.query(`
-      UPDATE products
-      SET rating = $1, reviews_count = $2
-      WHERE id = $3
-    `, [Number(stats.avgrating).toFixed(1), stats.countreviews, id]);
-
+    if (adminDb) {
+      await adminDb.collection('reviews').add({
+        productId: id,
+        reviewerName,
+        rating,
+        comment,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Calculate new average from Firestore
+      const snapshot = await adminDb.collection('reviews').where('productId', '==', id).get();
+      let sum = 0;
+      snapshot.forEach((doc: any) => { sum += doc.data().rating; });
+      const avg = snapshot.size > 0 ? (sum / snapshot.size).toFixed(1) : rating.toFixed(1);
+      
+      // Still update the summary stats on the product in Postgres
+      await db.query(`
+        UPDATE products
+        SET rating = $1, reviews_count = $2
+        WHERE id = $3
+      `, [avg, snapshot.size, id]);
+    }
     res.status(201).json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to submit review' });
@@ -485,9 +512,10 @@ app.post('/api/products/:id/reviews', async (req, res) => {
 
 app.get('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const resDb = await db.query('SELECT cart_items FROM carts WHERE user_id = $1', [req.user!.id]);
-    const data = resDb.rows[0] as any;
-    res.json(data ? JSON.parse(data.cart_items) : []);
+    if (!adminDb) return res.json([]);
+    const doc = await adminDb.collection('users').doc(req.user!.email).get();
+    const data = doc.data();
+    res.json(data?.cart || []);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve cart' });
   }
@@ -495,10 +523,12 @@ app.get('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
 
 app.post('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    await db.query(`
-      INSERT INTO carts (user_id, cart_items) VALUES ($1, $2)
-      ON CONFLICT(user_id) DO UPDATE SET cart_items = EXCLUDED.cart_items, updated_at = CURRENT_TIMESTAMP
-    `, [req.user!.id, JSON.stringify(req.body.items)]);
+    if (adminDb) {
+      await adminDb.collection('users').doc(req.user!.email).update({
+        cart: req.body.items,
+        updatedAt: new Date().toISOString()
+      });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save cart state' });
@@ -507,9 +537,9 @@ app.post('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
 
 app.get('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const resDb = await db.query('SELECT product_id FROM wishlist WHERE user_id = $1', [req.user!.id]);
-    const items = resDb.rows as any[];
-    res.json(items.map(i => i.product_id));
+    if (!adminDb) return res.json([]);
+    const doc = await adminDb.collection('users').doc(req.user!.email).get();
+    res.json(doc.data()?.wishlist || []);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve wishlist' });
   }
@@ -518,7 +548,14 @@ app.get('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
 app.post('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { productId } = req.body;
-    await db.query('INSERT INTO wishlist (user_id, product_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [req.user!.id, productId]);
+    if (adminDb) {
+      const userRef = adminDb.collection('users').doc(req.user!.email);
+      const doc = await userRef.get();
+      const wishlist = doc.data()?.wishlist || [];
+      if (!wishlist.includes(productId)) {
+        await userRef.update({ wishlist: [...wishlist, productId] });
+      }
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update wishlist' });
@@ -528,7 +565,13 @@ app.post('/api/wishlist', authenticateToken, async (req: AuthRequest, res) => {
 app.delete('/api/wishlist/:productId', authenticateToken, async (req: AuthRequest, res) => {
   const { productId } = req.params;
   try {
-    await db.query('DELETE FROM wishlist WHERE user_id = $1 AND product_id = $2', [req.user!.id, productId]);
+    if (adminDb) {
+      const userRef = adminDb.collection('users').doc(req.user!.email);
+      const doc = await userRef.get();
+      let wishlist = doc.data()?.wishlist || [];
+      wishlist = wishlist.filter((id: string) => id !== productId);
+      await userRef.update({ wishlist });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete wishlist item' });
@@ -577,27 +620,39 @@ app.post('/api/orders/checkout', authenticateToken, async (req: AuthRequest, res
     }
 
     const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-    await db.query(`
-      INSERT INTO orders (id, user_id, email, status, subtotal, tax, total, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, coupon_code, payment_id)
-      VALUES ($1, $2, $3, 'processing', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    `, [
-      orderId, userId, req.user!.email, subtotal, tax, total,
-      shipping.name, shipping.address, shipping.city, shipping.state, shipping.zip, shipping.country,
-      couponCode || null, paymentId || null
-    ]);
+    const orderData = {
+      id: orderId,
+      userId: req.user!.email,
+      email: req.user!.email,
+      status: 'processing',
+      subtotal,
+      tax,
+      total,
+      shippingName: shipping.name,
+      shippingAddress: shipping.address,
+      shippingCity: shipping.city,
+      shippingState: shipping.state,
+      shippingZip: shipping.zip,
+      shippingCountry: shipping.country,
+      couponCode: couponCode || null,
+      paymentId: paymentId || null,
+      createdAt: new Date().toISOString(),
+      items: cart.map((item: any) => ({
+        productId: item.product?.id,
+        productName: item.product?.name,
+        quantity: item.quantity,
+        price: item.product?.price,
+        customConfig: item.customConfig || null
+      }))
+    };
 
-    for (const item of cart) {
-      await db.query(`
-        INSERT INTO order_items (order_id, product_id, product_name, quantity, price, custom_config)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        orderId, item.product?.id, item.product?.name, item.quantity,
-        item.product?.price, item.customConfig ? JSON.stringify(item.customConfig) : null
-      ]);
+    if (adminDb) {
+      // Save order to Firestore
+      await adminDb.collection('orders').doc(orderId).set(orderData);
+
+      // Clear cart
+      await adminDb.collection('users').doc(req.user!.email).update({ cart: [] });
     }
-
-    // Clear cart
-    await db.query('DELETE FROM carts WHERE user_id = $1', [userId]);
 
     res.json({ success: true, orderId });
   } catch (err) {
@@ -608,50 +663,51 @@ app.post('/api/orders/checkout', authenticateToken, async (req: AuthRequest, res
 
 app.get('/api/orders/history', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const resDb = await db.query('SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC', [req.user!.id]);
-    const orders = resDb.rows as any[];
+    if (!adminDb) return res.json([]);
+    const snapshot = await adminDb.collection('orders')
+      .where('email', '==', req.user!.email)
+      .orderBy('createdAt', 'desc')
+      .get();
     
+    const orders = snapshot.docs.map((doc: any) => doc.data());
     const enrichedOrders = [];
+    
     for (let order of orders) {
-      const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
-      const items = itemsDb.rows as any[];
       const enrichedItems = [];
-      for (let item of items) {
-        const productDb = await db.query('SELECT * FROM products WHERE id = $1', [item.product_id]);
+      for (let item of order.items) {
+        // Fetch product metadata from Postgres
+        const productDb = await db.query('SELECT * FROM products WHERE id = $1', [item.productId]);
         const product = productDb.rows[0] as any;
         let finalProduct = product ? formatProduct(product) : {
-          id: item.product_id,
-          name: item.product_name || 'Product',
+          id: item.productId,
+          name: item.productName || 'Product',
           image: '',
           price: item.price
         };
 
         enrichedItems.push({
-          id: item.id,
+          id: item.productId,
           product: finalProduct,
           quantity: item.quantity,
-          selectedModel: item.selected_model || null,
-          selectedMaterial: item.selected_material || null,
-          selectedColor: { id: 'default', name: 'Default', bgClass: 'bg-gray-900' },
           price: item.price,
-          customConfig: item.custom_config ? typeof item.custom_config === 'string' ? JSON.parse(item.custom_config) : item.custom_config : null
+          customConfig: item.customConfig
         });
       }
 
       enrichedOrders.push({
         id: order.id,
-        date: new Date(order.created_at).toLocaleDateString() + ' at ' + new Date(order.created_at).toLocaleTimeString(),
+        date: new Date(order.createdAt).toLocaleDateString() + ' at ' + new Date(order.createdAt).toLocaleTimeString(),
         status: order.status,
         subtotal: order.subtotal,
         tax: order.tax,
         total: order.total,
         shipping: {
-          fullName: order.shipping_name,
-          addressLine1: order.shipping_address,
-          city: order.shipping_city,
-          state: order.shipping_state,
-          postalCode: order.shipping_zip,
-          country: order.shipping_country
+          fullName: order.shippingName,
+          addressLine1: order.shippingAddress,
+          city: order.shippingCity,
+          state: order.shippingState,
+          postalCode: order.shippingZip,
+          country: order.shippingCountry
         },
         items: enrichedItems
       });
@@ -667,17 +723,18 @@ app.get('/api/orders/history', authenticateToken, async (req: AuthRequest, res) 
 app.get('/api/orders/:id', authenticateToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
   try {
-    const resDb = await db.query('SELECT * FROM orders WHERE id = $1', [id]);
-    const order = resDb.rows[0] as any;
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!adminDb) return res.status(404).json({ error: 'Order not found' });
+    const doc = await adminDb.collection('orders').doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: 'Order not found' });
+    
+    const order = doc.data();
 
     // Verify ownership
-    if (order.user_id !== req.user!.id && req.user!.role !== 'admin') {
+    if (order.email !== req.user!.email && req.user!.role !== 'admin') {
       return res.status(403).json({ error: 'Permission denied' });
     }
 
-    const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [id]);
-    res.json({ ...order, items: itemsDb.rows });
+    res.json(order);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch order details' });
   }
@@ -686,12 +743,15 @@ app.get('/api/orders/:id', authenticateToken, async (req: AuthRequest, res) => {
 app.post('/api/orders/:id/cancel', authenticateToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
   try {
-    const resDb = await db.query('SELECT * FROM orders WHERE id = $1', [id]);
-    const order = resDb.rows[0] as any;
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!adminDb) return res.status(404).json({ error: 'Order not found' });
+    const orderRef = adminDb.collection('orders').doc(id);
+    const doc = await orderRef.get();
+    
+    if (!doc.exists) return res.status(404).json({ error: 'Order not found' });
+    const order = doc.data();
 
     // Verify ownership
-    if (order.user_id !== req.user!.id && req.user!.role !== 'admin') {
+    if (order.email !== req.user!.email && req.user!.role !== 'admin') {
       return res.status(403).json({ error: 'Permission denied' });
     }
 
@@ -699,13 +759,14 @@ app.post('/api/orders/:id/cancel', authenticateToken, async (req: AuthRequest, r
       return res.status(400).json({ error: 'Order is already cancelled' });
     }
 
-    await db.query("UPDATE orders SET status = 'cancelled' WHERE id = $1", [id]);
+    await orderRef.update({ status: 'cancelled' });
 
-    // Restore stock
-    const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [id]);
-    for (const item of itemsDb.rows) {
-      if (item.product_id?.startsWith('bespoke-')) continue;
-      await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity, item.product_id]);
+    // Restore stock in Postgres
+    if (order.items && Array.isArray(order.items)) {
+      for (const item of order.items) {
+        if (item.productId?.startsWith('bespoke-')) continue;
+        await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity, item.productId]);
+      }
     }
 
     res.json({ success: true });
@@ -851,24 +912,39 @@ app.post('/api/verify-payment', (req: Request, res: Response) => {
 
 app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const totalSalesDb = await db.query("SELECT SUM(total) as sum FROM orders WHERE status != 'cancelled'");
-    const totalSales = totalSalesDb.rows[0] as any;
-    const totalOrdersDb = await db.query("SELECT COUNT(id) as count FROM orders");
-    const totalOrders = totalOrdersDb.rows[0] as any;
-    const totalCustomersDb = await db.query("SELECT COUNT(id) as count FROM users WHERE role = 'customer'");
-    const totalCustomers = totalCustomersDb.rows[0] as any;
+    let totalRevenue = 0;
+    let ordersCount = 0;
+    let customersCount = 0;
+    let salesHistory: any[] = [];
+    
+    if (adminDb) {
+      // Calculate from Firestore orders
+      const ordersSnapshot = await adminDb.collection('orders').where('status', '!=', 'cancelled').get();
+      ordersCount = ordersSnapshot.size;
+      ordersSnapshot.forEach((doc: any) => {
+        totalRevenue += doc.data().total || 0;
+      });
+
+      const usersSnapshot = await adminDb.collection('users').where('role', '==', 'customer').get();
+      customersCount = usersSnapshot.size;
+      
+      // Compute daily sales history locally from the snapshot (last 7 days approx)
+      const dailyMap: Record<string, number> = {};
+      ordersSnapshot.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.createdAt) {
+          const d = new Date(data.createdAt).toISOString().split('T')[0];
+          dailyMap[d] = (dailyMap[d] || 0) + (data.total || 0);
+        }
+      });
+      salesHistory = Object.entries(dailyMap)
+        .map(([date, daily_total]) => ({ date, daily_total }))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 7);
+    }
+
     const lowStockItemsDb = await db.query("SELECT COUNT(id) as count FROM products WHERE stock <= 5");
     const lowStockItems = lowStockItemsDb.rows[0] as any;
-
-    const salesHistoryDb = await db.query(`
-      SELECT DATE(created_at) as date, SUM(total) as daily_total
-      FROM orders
-      WHERE status != 'cancelled'
-      GROUP BY DATE(created_at)
-      ORDER BY date DESC
-      LIMIT 7
-    `);
-    const salesHistory = salesHistoryDb.rows as any[];
 
     const lowStockListDb = await db.query(`
       SELECT id, name, stock, price, image_url
@@ -881,9 +957,9 @@ app.get('/api/admin/dashboard', authenticateToken, requireAdmin, async (req, res
 
     res.json({
       stats: {
-        totalRevenue: totalSales.sum || 0.0,
-        ordersCount: totalOrders.count || 0,
-        customersCount: totalCustomers.count || 0,
+        totalRevenue: totalRevenue || 0.0,
+        ordersCount: ordersCount || 0,
+        customersCount: customersCount || 0,
         lowStockAlerts: lowStockItems.count || 0
       },
       salesHistory,
@@ -1009,13 +1085,9 @@ app.delete('/api/admin/products/:id', authenticateToken, requireAdmin, async (re
 // GET /api/admin/orders — All orders
 app.get('/api/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const resDb = await db.query('SELECT * FROM orders ORDER BY created_at DESC');
-    const orders = resDb.rows as any[];
-    
-    for (let order of orders) {
-      const itemsDb = await db.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
-      order.items = itemsDb.rows;
-    }
+    if (!adminDb) return res.json([]);
+    const snapshot = await adminDb.collection('orders').orderBy('createdAt', 'desc').get();
+    const orders = snapshot.docs.map((doc: any) => doc.data());
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to retrieve orders' });
@@ -1030,7 +1102,9 @@ app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, async (
   if (!status) return res.status(400).json({ error: 'Status required' });
 
   try {
-    await db.query('UPDATE orders SET status = $1 WHERE id = $2', [status, id]);
+    if (adminDb) {
+      await adminDb.collection('orders').doc(id).update({ status });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
@@ -1082,7 +1156,12 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email required' });
 
   try {
-    await db.query('INSERT INTO newsletter_subscribers (email) VALUES ($1) ON CONFLICT DO NOTHING', [email.toLowerCase()]);
+    if (adminDb) {
+      await adminDb.collection('newsletter_subscribers').doc(email.toLowerCase()).set({
+        email: email.toLowerCase(),
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Subscription failed' });

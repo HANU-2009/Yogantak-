@@ -150,13 +150,13 @@ export default function ProductDetailsModal({
   const [activeColor, setActiveColor] = useState<CaseColor>(chosenColor);
   const [activeMaterial, setActiveMaterial] = useState<CaseMaterial>(chosenMaterial);
   
-  // Custom interactive states to match CRUX chocolates layout and mechanics
+  // Custom interactive states
   const [activeThumbnailIndex, setActiveThumbnailIndex] = useState<number>(0);
   const [activeBundleIndex, setActiveBundleIndex] = useState<number>(0);
   const [purchaseType, setPurchaseType] = useState<'onetime' | 'subscribe'>('onetime');
   const [deliveryFrequency, setDeliveryFrequency] = useState<string>('Every 1 Month');
   
-  // Accordion active toggles matching the image "Ingredients" and "Product Benefit" panels
+  // Accordion active toggles
   const [isIngredientsOpen, setIsIngredientsOpen] = useState<boolean>(true);
   const [isBenefitsOpen, setIsBenefitsOpen] = useState<boolean>(false);
   
@@ -201,42 +201,42 @@ export default function ProductDetailsModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" id="product-details-backdrop">
       
-      {/* Dark warm overlay backdrop */}
+      {/* Light overlay backdrop */}
       <div 
-        className="fixed inset-0 bg-[#35251B]/75 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       ></div>
 
       <div className="flex min-h-screen items-start sm:items-center justify-center p-2 sm:p-6 lg:p-10">
         
         {/* Core Product Details aesthetic cream tablet */}
-        <div className="relative w-full max-w-[1050px] bg-[#FAF7F0] border-2 border-[#E5DEC9] rounded-2xl sm:rounded-[32px] shadow-2xl overflow-hidden text-[#2B1B15] font-sans">
+        <div className="relative w-full max-w-[1050px] bg-[#fdfdfd]/40 backdrop-blur-3xl border-2 border-neutral-200/60 rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden text-neutral-900 font-sans">
           
-          {/* CRUX ESTABLISHED HEADER BAR REPLICATED */}
-          <div className="flex items-center justify-between gap-3 px-4 sm:px-10 py-4 sm:py-5 bg-[#FAF7F0] border-b border-[#EBE3CD] select-none">
+          {/* HEADER BAR */}
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-10 py-4 sm:py-5 bg-transparent border-b border-neutral-200/50 select-none">
             
-            {/* Logo in gorgeous high-contrast red-orange serif font */}
+            {/* Logo */}
             <div className="flex items-center gap-2">
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-[0.05em] text-[#C24B35] italic uppercase">
+              <span className="font-sans text-xl sm:text-2xl font-extrabold tracking-tight text-neutral-900 uppercase">
                 YOGANTAK
               </span>
-              <span className="text-xs font-mono font-bold tracking-widest text-[#8F7D6D] uppercase hidden sm:inline-block pl-2">
-                // CRUX EDITION
+              <span className="text-xs font-mono font-bold tracking-widest text-neutral-500 uppercase hidden sm:inline-block pl-2">
+                // FLAGSHIP
               </span>
             </div>
 
-            {/* Menu options exactly mirroring the photo query */}
-            <div className="hidden md:flex items-center gap-8 font-sans text-xs font-bold uppercase tracking-wider text-[#4E3D34]">
-              <span className="hover:text-[#C24B35] cursor-pointer transition-colors pb-0.5 border-b border-transparent">
+            {/* Menu options */}
+            <div className="hidden md:flex items-center gap-8 font-sans text-xs font-bold uppercase tracking-wider text-neutral-600">
+              <span className="hover:text-neutral-900 cursor-pointer transition-colors pb-0.5 border-b border-transparent">
                 Shop
               </span>
-              <span className="hover:text-[#C24B35] cursor-pointer transition-colors pb-0.5 border-b border-transparent">
+              <span className="hover:text-neutral-900 cursor-pointer transition-colors pb-0.5 border-b border-transparent">
                 Bundle
               </span>
-              <span className="hover:text-[#C24B35] cursor-pointer transition-colors pb-0.5 border-b border-transparent text-[#C24B35]">
+              <span className="hover:text-neutral-900 cursor-pointer transition-colors pb-0.5 border-b border-transparent text-neutral-900">
                 Subscribe
               </span>
-              <span className="hover:text-[#C24B35] cursor-pointer transition-colors pb-0.5 border-b border-transparent">
+              <span className="hover:text-neutral-900 cursor-pointer transition-colors pb-0.5 border-b border-transparent">
                 Our Story
               </span>
             </div>
@@ -247,24 +247,24 @@ export default function ProductDetailsModal({
               {/* Toggle Save design */}
               <button
                 onClick={() => onToggleSaved(product.id)}
-                className={`p-2 rounded-full border border-[#E1D8BE] hover:bg-[#EBE3CD] transition-colors cursor-pointer ${
-                  isSaved ? 'text-[#C24B35]' : 'text-[#8F7D6D]'
+                className={`p-2 rounded-full border border-neutral-200 hover:bg-white/10 backdrop-blur-sm transition-colors cursor-pointer ${
+                  isSaved ? 'text-red-500' : 'text-neutral-500'
                 }`}
                 title="Wishlist product"
                 id="wishlistBtn"
               >
-                <Heart className={`w-4 h-4 ${isSaved ? 'fill-[#C24B35]' : ''}`} />
+                <Heart className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
               </button>
 
               {/* Shopping Bag Trigger */}
-              <div className="relative p-2 rounded-full border border-[#E1D8BE] bg-white text-[#2B1B15]">
+              <div className="relative p-2 rounded-full border border-neutral-200 bg-white/20 backdrop-blur-sm text-neutral-900">
                 <ShoppingBag className="w-4 h-4" />
               </div>
 
-              {/* Close Button X with circular outline */}
+              {/* Close Button X */}
               <button
                 onClick={onClose}
-                className="p-2 bg-[#C24B35] border border-[#C24B35] text-white hover:bg-[#A93E28] transition-colors rounded-full cursor-pointer ml-1"
+                className="p-2 bg-neutral-900 border border-neutral-900 text-white hover:bg-neutral-800 transition-colors rounded-full cursor-pointer ml-1 shadow-sm"
                 title="Close modal"
                 id="closeModalBtn"
               >
@@ -275,7 +275,7 @@ export default function ProductDetailsModal({
           </div>
 
           {/* Main Workspace Frame container */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 p-4 sm:p-10 max-h-[92vh] sm:max-h-[85vh] overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 max-h-[85vh] overflow-y-auto bg-transparent gap-6 sm:gap-8 p-4 sm:p-10">
             
             {/* LEFT BLOCK: Thumbnail bar, main preview frame and model lifestyle image splits (Col-6.5) */}
             <div className="lg:col-span-7 flex flex-col gap-6 select-none">
@@ -290,8 +290,8 @@ export default function ProductDetailsModal({
                       <button
                         key={idx}
                         onClick={() => setActiveThumbnailIndex(idx)}
-                        className={`w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl overflow-hidden border-2 transition-all p-1 flex items-center justify-center cursor-pointer flex-shrink-0 ${
-                          isSelected ? 'border-[#C24B35] ring-2 ring-[#C24B35]/20 scale-102 shadow-sm' : 'border-[#E3DAC0] hover:border-[#2B1B15]/40'
+                        className={`w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-[1rem] overflow-hidden border-2 transition-all p-1 flex items-center justify-center cursor-pointer flex-shrink-0 ${
+                          isSelected ? 'border-neutral-900 ring-2 ring-neutral-900/10 scale-102 shadow-sm' : 'border-neutral-200 hover:border-neutral-400'
                         }`}
                         id={`thumbBtn-${idx}`}
                       >
@@ -323,16 +323,16 @@ export default function ProductDetailsModal({
                 </div>
 
                 {/* 2. Main Large Square Preview Window displaying selected thumbnail */}
-                <div className="flex-1 bg-[#FAF7F0] rounded-2xl relative border-2 border-[#EADFCE] flex flex-col items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[350px] md:min-h-[420px] shadow-sm">
+                <div className="flex-1 bg-white/20 backdrop-blur-md rounded-[1.5rem] relative border border-neutral-200/60 flex flex-col items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[350px] md:min-h-[420px] shadow-sm">
                   
                   {/* "Best seller" badge matching CRUX layout position */}
                   {product.bestseller && (
-                    <div className="absolute top-5 left-5 bg-[#F9D949] border-2 border-[#2B1B15]/90 text-[#2B1B15] text-[10px] uppercase tracking-widest px-3.5 py-1.5 rounded-full font-bold shadow-sm z-10">
+                    <div className="absolute top-5 left-5 bg-[#cfff71] text-neutral-900 text-[10px] uppercase tracking-widest px-3.5 py-1.5 rounded-full font-bold shadow-sm z-10">
                       Best seller
                     </div>
                   )}
 
-                  <div className="hidden sm:block absolute top-5 right-5 font-mono text-[9px] text-[#A69584] uppercase tracking-widest font-bold">
+                  <div className="hidden sm:block absolute top-5 right-5 font-mono text-[9px] text-neutral-500 uppercase tracking-widest font-bold">
                     PRESET LINE // {activeColor.name}
                   </div>
 
@@ -343,7 +343,7 @@ export default function ProductDetailsModal({
                         <img 
                           src={product.image} 
                           alt={product.name} 
-                          className="max-w-full max-h-full object-contain drop-shadow-xl rounded-2xl" 
+                          className="max-w-full max-h-full object-contain drop-shadow-xl rounded-[1.5rem]" 
                         />
                       </div>
                     ) : (
@@ -358,49 +358,49 @@ export default function ProductDetailsModal({
                       </div>
                     )
                   ) : activeThumbnailIndex === 1 ? (
-                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center">
+                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center bg-white/20 backdrop-blur-sm">
                       <img 
                         src={activeAssets.thumbnails[1]} 
                         alt="Macro visual" 
-                        className="w-full h-64 object-cover rounded-xl shadow-md border border-[#E3DAC0]"
+                        className="w-full h-64 object-cover rounded-[1rem] shadow-sm border border-neutral-200"
                       />
                       <div className="space-y-0.5">
-                        <span className="text-[10px] font-mono tracking-widest uppercase text-[#8F7D6D] block">CRAFT MANUAL</span>
-                        <h4 className="font-serif font-bold text-base text-[#2B1B15]">Meticulous material grain inspection</h4>
+                        <span className="text-[10px] font-mono tracking-widest uppercase text-neutral-500 block">CRAFT MANUAL</span>
+                        <h4 className="font-sans font-extrabold text-base text-neutral-900">Meticulous material grain inspection</h4>
                       </div>
                     </div>
                   ) : activeThumbnailIndex === 2 ? (
-                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center">
+                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center bg-white/20 backdrop-blur-sm">
                       <img 
                         src={activeAssets.thumbnails[2]} 
                         alt="Lifestyle close" 
-                        className="w-full h-64 object-cover rounded-xl shadow-md border border-[#E3DAC0]"
+                        className="w-full h-64 object-cover rounded-[1rem] shadow-sm border border-neutral-200"
                         referrerPolicy="no-referrer"
                       />
                       <div className="space-y-0.5">
-                        <span className="text-[10px] font-mono tracking-widest uppercase text-[#8F7D6D] block">COMMUNITY PORTRAIT</span>
-                        <h4 className="font-serif font-bold text-base text-[#2B1B15]">{activeModel} Shielding fit case</h4>
+                        <span className="text-[10px] font-mono tracking-widest uppercase text-neutral-500 block">COMMUNITY PORTRAIT</span>
+                        <h4 className="font-sans font-extrabold text-base text-neutral-900">{activeModel} Shielding fit case</h4>
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center bg-[#EFECE1]">
+                    <div className="w-full h-full absolute inset-0 py-6 px-10 flex flex-col justify-between items-center text-center bg-white/20 backdrop-blur-sm">
                       <img 
                         src={activeAssets.thumbnails[3]} 
                         alt="Texture closeup" 
-                        className="w-full h-64 object-cover rounded-xl shadow-md border border-[#E3DAC0]"
+                        className="w-full h-64 object-cover rounded-[1rem] shadow-sm border border-neutral-200"
                         referrerPolicy="no-referrer"
                       />
                       <div className="space-y-0.5">
-                        <span className="text-[10px] font-mono tracking-widest uppercase text-[#8F7D6D] block">PRESET DETAILS</span>
-                        <h4 className="font-serif font-bold text-base text-[#2B1B15]">{activeMaterial} layer grain overview</h4>
+                        <span className="text-[10px] font-mono tracking-widest uppercase text-neutral-500 block">PRESET DETAILS</span>
+                        <h4 className="font-sans font-extrabold text-base text-neutral-900">{activeMaterial} layer grain overview</h4>
                       </div>
                     </div>
                   )}
 
                   {/* Elegant available color tones dot panel */}
                   <div className="absolute bottom-5 inset-x-0 flex gap-2 items-center justify-center">
-                    <span className="text-[10px] font-mono font-medium text-[#8F7D6D] uppercase">Tones:</span>
-                    <div className="flex gap-2.5 bg-white/70 backdrop-blur-xs border border-[#E3DAC0] px-3 py-1.5 rounded-full shadow-xs">
+                    <span className="text-[10px] font-mono font-bold text-neutral-500 uppercase">Tones:</span>
+                    <div className="flex gap-2.5 bg-white/20 backdrop-blur-sm border border-neutral-200 px-3 py-1.5 rounded-full shadow-xs">
                       {product.colors.map(c => (
                         <button
                           key={c.id}
@@ -409,7 +409,7 @@ export default function ProductDetailsModal({
                             setActiveThumbnailIndex(0); // Jump back to case display
                           }}
                           className={`w-4 h-4 rounded-full ${c.bgClass} border border-black/15 transition-all ${
-                            activeColor.id === c.id ? 'ring-2 ring-[#C24B35] ring-offset-1 scale-115' : 'opacity-80 hover:opacity-100'
+                            activeColor.id === c.id ? 'ring-2 ring-neutral-900 ring-offset-1 scale-115' : 'opacity-80 hover:opacity-100'
                           }`}
                           title={c.name}
                           id={`colorBtn-${c.id}`}
@@ -423,7 +423,7 @@ export default function ProductDetailsModal({
               </div>
 
               {/* 3. LIFESTYLE BANNER PIC BELOW MAIN PREVIEW (Girls/Guys with phone smiling) */}
-              <div className="relative rounded-2xl overflow-hidden border-2 border-[#E1D8BE] aspect-[21/9] hidden md:block bg-neutral-100 shadow-sm leading-none group">
+              <div className="relative rounded-[1.5rem] overflow-hidden border border-neutral-200 aspect-[21/9] hidden md:block bg-white/10 backdrop-blur-sm shadow-sm leading-none group">
                 <img 
                   src={activeAssets.landscapeLifestyle} 
                   alt="Organic design community" 
@@ -432,14 +432,14 @@ export default function ProductDetailsModal({
                 />
                 
                 {/* Vintage overlay texture */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-[#35251B]/80 via-[#35251B]/20 to-transparent z-1" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-neutral-900/80 via-neutral-900/20 to-transparent z-1" />
                 
                 {/* Caption overlay */}
                 <div className="absolute bottom-4 left-5 z-10">
-                  <span className="text-[9px] font-mono tracking-[0.25em] text-[#EADFCE] uppercase block font-extrabold pb-0.5">
+                  <span className="text-[9px] font-mono tracking-[0.25em] text-white uppercase block font-extrabold pb-0.5">
                     DESIGN TEAM COLLECTION
                   </span>
-                  <p className="font-serif text-white text-base tracking-wide italic leading-snug">
+                  <p className="font-sans text-white text-base tracking-wide font-medium leading-snug">
                     "Precision engineered armor elements curated with structural aesthetic beauty."
                   </p>
                 </div>
@@ -455,13 +455,13 @@ export default function ProductDetailsModal({
                 
                 {/* Ratings */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <div className="flex text-[#C24B35]">
+                  <div className="flex text-neutral-900">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-[#C24B35] text-[#C24B35]" />
+                      <Star key={i} className="w-3.5 h-3.5 fill-neutral-900 text-neutral-900" />
                     ))}
                   </div>
-                  <strong className="text-xs font-mono font-bold text-[#2B1B15] pl-1">(5.0)</strong>
-                  <span className="text-[10.5px] font-mono text-[#8F7D6D] uppercase tracking-wider pl-1 font-semibold">
+                  <strong className="text-xs font-mono font-bold text-neutral-900 pl-1">(5.0)</strong>
+                  <span className="text-[10.5px] font-mono text-neutral-500 uppercase tracking-wider pl-1 font-semibold">
                     1.2k verified reviews
                   </span>
                   <div className="ml-auto flex items-center gap-1 bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 px-2 py-0.5 rounded-md">
@@ -470,34 +470,34 @@ export default function ProductDetailsModal({
                   </div>
                 </div>
 
-                {/* Main Product Name (rendered using Serif Cormorant font) */}
-                <h1 className="font-serif text-2xl sm:text-4xl font-bold tracking-tight text-[#2B1B15] leading-[1.08] capitalize">
+                {/* Main Product Name */}
+                <h1 className="font-sans text-2xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 leading-[1.08] capitalize">
                   {product.name.replace(/case.*/i, 'Case')}
                 </h1>
 
                 {/* Subtitle tag */}
-                <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-[#8F7D6D] uppercase tracking-widest">
-                  <Smartphone className="w-3.5 h-3.5 text-[#C24B35]" />
+                <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
+                  <Smartphone className="w-3.5 h-3.5 text-neutral-900" />
                   <span>Tailored for {activeModel.split(' ')[0]} flagships</span>
                 </div>
 
               </div>
 
               {/* Product detail paragraph */}
-              <p className="text-[13.5px] leading-relaxed text-[#514339]">
+              <p className="text-[13.5px] leading-relaxed text-neutral-600">
                 {product.description}
               </p>
 
-              {/* Composition Specifications (Represents "Nutrition" badges in the screenshot) */}
+              {/* Composition Specifications */}
               <div className="space-y-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#8F7D6D] block">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-500 block">
                   Specifications
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {activeAssets.specs.map((spec, index) => (
                     <span 
                       key={index}
-                      className="bg-[#EBE3CD]/60 text-[#2B1B15] text-[10.5px] px-3.5 py-1.5 rounded-full font-bold font-mono tracking-wide uppercase select-none border border-[#DECFA9]/40"
+                      className="bg-white/10 backdrop-blur-sm text-neutral-900 text-[10.5px] px-3.5 py-1.5 rounded-full font-bold font-mono tracking-wide uppercase select-none border border-neutral-200"
                     >
                       {spec}
                     </span>
@@ -506,35 +506,35 @@ export default function ProductDetailsModal({
               </div>
 
               {/* Device Selector */}
-              <div className="space-y-2 border-t border-[#EFECE1] pt-4.5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#8F7D6D] block">
+              <div className="space-y-2 border-t border-neutral-200 pt-4.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-500 block">
                   Device Compatibility:
                 </span>
                 <div className="relative">
                   <select
                     value={activeModel}
                     onChange={(e) => setActiveModel(e.target.value as PhoneModel)}
-                    className="w-full bg-[#FAF7F0] border-2 border-[#E1D8BE] text-xs font-mono py-2.5 px-3.5 text-[#2B1B15] rounded-xl focus:outline-none focus:border-[#C24B35] cursor-pointer appearance-none shadow-xs"
+                    className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 text-xs font-mono py-3 px-4 text-neutral-900 rounded-xl focus:outline-none focus:border-neutral-400 cursor-pointer appearance-none shadow-sm"
                     id="compatibilitySelect"
                   >
                     {product.models.map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#C24B35]">
+                  <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-neutral-900">
                     <ArrowRight className="w-4 h-4" />
                   </div>
                 </div>
               </div>
 
-              {/* Bundle Selector exactly mirroring the photo query */}
-              <div className="space-y-2 border-t border-[#EFECE1] pt-4.5">
+              {/* Bundle Selector */}
+              <div className="space-y-2 border-t border-neutral-200 pt-4.5">
                 
                 <div className="flex justify-between items-baseline">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#8F7D6D]">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-500">
                     Bundle Config
                   </span>
-                  <span className="text-[10px] font-mono font-bold uppercase text-[#C24B35] tracking-widest">
+                  <span className="text-[10px] font-mono font-bold uppercase text-neutral-900 tracking-widest">
                     {selectedBundle.tag}
                   </span>
                 </div>
@@ -548,8 +548,8 @@ export default function ProductDetailsModal({
                         onClick={() => setActiveBundleIndex(idx)}
                         className={`py-2 px-1 rounded-xl text-center font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${
                           isSelected 
-                            ? 'bg-[#412F26] border-[#412F26] text-[#FAF7F0] shadow-sm' 
-                            : 'bg-[#FAF7F0] border-[#E1D8BE] text-[#3B2D25] hover:bg-[#EBE3CD]'
+                            ? 'bg-neutral-900 border-neutral-900 text-white shadow-sm' 
+                            : 'bg-white/20 backdrop-blur-sm border-neutral-200 text-neutral-600 hover:bg-white/20 backdrop-blur-sm hover:text-neutral-900'
                         }`}
                         id={`bundleBtn-${val.id}`}
                       >
@@ -561,88 +561,88 @@ export default function ProductDetailsModal({
 
               </div>
 
-              {/* Purchase Options Container Box (One-time vs Subscribe with 15% discount) */}
-              <div className="border-2 border-[#E1D8BE] rounded-2xl bg-[#FAF7F0] overflow-hidden divide-y divide-[#E1D8BE]">
+              {/* Purchase Options Container Box */}
+              <div className="border border-neutral-200/60 rounded-2xl bg-white/20 backdrop-blur-md overflow-hidden divide-y divide-neutral-200/60 shadow-sm">
                 
                 {/* 1. ONE TIME PURCHASE tab */}
                 <div 
                   className={`p-4 flex items-center justify-between cursor-pointer transition-colors ${
-                    purchaseType === 'onetime' ? 'bg-[#EFECE1]/55' : 'hover:bg-[#EFECE1]/30'
+                    purchaseType === 'onetime' ? 'bg-white/20 backdrop-blur-sm' : 'hover:bg-white/20 backdrop-blur-sm'
                   }`}
                   onClick={() => setPurchaseType('onetime')}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      purchaseType === 'onetime' ? 'border-[#C24B35]' : 'border-[#8F7D6D]'
+                      purchaseType === 'onetime' ? 'border-neutral-900' : 'border-neutral-300'
                     }`}>
                       {purchaseType === 'onetime' && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#C24B35]" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-neutral-900" />
                       )}
                     </div>
-                    <span className="text-xs sm:text-sm font-bold text-[#2B1B15] tracking-wide">
+                    <span className="text-xs sm:text-sm font-bold text-neutral-900 tracking-wide">
                       One time purchase
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <strong className="text-sm font-mono text-[#2B1B15]">
+                    <strong className="text-sm font-mono text-neutral-900">
                       ₹{bundleBasePrice.toLocaleString('en-IN')}
                     </strong>
-                    <span className="text-[9px] text-[#8F7D6D] font-mono">(Incl. GST)</span>
+                    <span className="text-[9px] text-neutral-500 font-mono">(Incl. GST)</span>
                   </div>
                 </div>
 
                 {/* 2. SUBSCRIBE & SAVE tab */}
                 <div 
                   className={`p-4 flex flex-col gap-3 transition-colors cursor-pointer ${
-                    purchaseType === 'subscribe' ? 'bg-[#EFECE1]/55' : 'hover:bg-[#EFECE1]/30'
+                    purchaseType === 'subscribe' ? 'bg-white/20 backdrop-blur-sm' : 'hover:bg-white/20 backdrop-blur-sm'
                   }`}
                   onClick={() => setPurchaseType('subscribe')}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        purchaseType === 'subscribe' ? 'border-[#C24B35]' : 'border-[#8F7D6D]'
+                        purchaseType === 'subscribe' ? 'border-neutral-900' : 'border-neutral-300'
                       }`}>
                         {purchaseType === 'subscribe' && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#C24B35]" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-neutral-900" />
                         )}
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1">
-                        <span className="text-xs sm:text-sm font-bold text-[#2B1B15] tracking-wide">
+                        <span className="text-xs sm:text-sm font-bold text-neutral-900 tracking-wide">
                           Subscribe & Save 15%
                         </span>
-                        <span className="bg-[#C24B35]/10 text-[#C24B35] text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider w-fit">
+                        <span className="bg-[#cfff71] text-neutral-900 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider w-fit">
                           ✦ VIP Club
                         </span>
                       </div>
                     </div>
                     <div className="text-right flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-                      <span className="text-[10px] font-mono text-[#8F7D6D] line-through">
+                      <span className="text-[10px] font-mono text-neutral-500 line-through">
                         ₹{bundleBasePrice.toLocaleString('en-IN')}
                       </span>
                       <div className="flex flex-col items-end">
-                        <strong className="text-sm font-mono text-[#C24B35]">
+                        <strong className="text-sm font-mono text-neutral-900">
                           ₹{finalPrice.toLocaleString('en-IN')}
                         </strong>
-                        <span className="text-[9px] text-[#8F7D6D] font-mono">(Incl. GST)</span>
+                        <span className="text-[9px] text-neutral-500 font-mono">(Incl. GST)</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Frequency Option Select - rendered only when subscription active */}
+                  {/* Frequency Option Select */}
                   {purchaseType === 'subscribe' && (
                     <div className="relative mt-1" onClick={(e) => e.stopPropagation()}>
                       <select 
                         value={deliveryFrequency}
                         onChange={(e) => setDeliveryFrequency(e.target.value)}
-                        className="w-full bg-[#FAF7F0] border border-[#C24B35]/30 text-xs font-mono py-2 px-3 rounded-lg text-[#2B1B15] focus:outline-none focus:ring-1 focus:ring-[#C24B35] appearance-none cursor-pointer"
+                        className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 text-xs font-mono py-2 px-3 rounded-lg text-neutral-900 focus:outline-none focus:border-neutral-400 appearance-none cursor-pointer"
                         id="subscribeFrequencySelect"
                       >
                         <option value="Every 1 Month">Every 1 Month (Most common)</option>
                         <option value="Every 2 Months">Every 2 Months</option>
                         <option value="Every 3 Months">Every 3 Months (Standard)</option>
                       </select>
-                      <div className="absolute right-3 top-2.5 pointer-events-none text-[#C24B35]/70 text-[9.5px] font-bold uppercase tracking-wider font-mono hidden sm:block">
+                      <div className="absolute right-3 top-2.5 pointer-events-none text-neutral-500 text-[9.5px] font-bold uppercase tracking-wider font-mono hidden sm:block">
                         Select delivery frequency
                       </div>
                     </div>
@@ -656,50 +656,50 @@ export default function ProductDetailsModal({
               <div className="pt-2">
                 <button
                   onClick={handleAddToCart}
-                  className={`w-full py-4 text-center font-mono text-[11px] font-bold uppercase tracking-[0.2em] transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2.5 bg-[#C24B35] hover:bg-[#A93E28] text-white shadow-xl ${
-                    isAdded ? 'opacity-90' : ''
+                  className={`w-full py-4 text-center font-mono text-[11px] font-bold uppercase tracking-[0.2em] transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2.5 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 shadow-sm ${
+                    isAdded ? 'opacity-90' : 'active:scale-[0.98]'
                   }`}
                   id="addToCartBtn"
                 >
-                  <Check className={`w-4 h-4 text-white transition-all ${isAdded ? 'scale-110' : 'scale-0 w-0'}`} />
+                  <Check className={`w-4 h-4 text-neutral-900 transition-all ${isAdded ? 'scale-110' : 'scale-0 w-0'}`} />
                   <span>{isAdded ? 'SUCCESSFULLY ADDED' : `Add To Cart — ₹${finalPrice.toLocaleString('en-IN')}`}</span>
                 </button>
               </div>
 
-              {/* CRUX ESTABLISHED EXPANSION ACCORDIONS (Ingredients & Product Benefit counterparts) */}
-              <div className="border-t border-[#EFECE1] pt-4.5 space-y-3">
+              {/* EXPANSION ACCORDIONS */}
+              <div className="border-t border-neutral-200 pt-4.5 space-y-3">
                 
-                {/* Accordion 1: Craftsmanship & Composition (Ingredients counterpart) */}
-                <div className="border-b border-[#E1D8BE] pb-3" id="ingredients-accordion">
+                {/* Accordion 1: Craftsmanship & Composition */}
+                <div className="border-b border-neutral-200 pb-3" id="ingredients-accordion">
                   <button
                     onClick={() => setIsIngredientsOpen(!isIngredientsOpen)}
-                    className="w-full flex items-center justify-between text-left font-serif text-base font-bold text-[#2B1B15] py-2 cursor-pointer hover:text-[#C24B35] transition-colors"
+                    className="w-full flex items-center justify-between text-left font-sans text-sm font-extrabold text-neutral-900 py-2 cursor-pointer hover:text-neutral-600 transition-colors"
                   >
                     <span>Craftsmanship & Elements</span>
-                    <span className="font-mono text-lg font-normal text-[#8F7D6D]">
+                    <span className="font-mono text-lg font-normal text-neutral-500">
                       {isIngredientsOpen ? '×' : '+'}
                     </span>
                   </button>
                   {isIngredientsOpen && (
-                    <p className="text-xs text-[#514339] leading-relaxed pt-2 pb-1 font-sans font-light">
+                    <p className="text-xs text-neutral-600 leading-relaxed pt-2 pb-1 font-sans font-medium">
                       {activeAssets.craftsmanshipText}
                     </p>
                   )}
                 </div>
 
-                {/* Accordion 2: Protective Cushion Guard (Product Benefit counterpart) */}
-                <div className="border-b border-[#E1D8BE] pb-3" id="benefits-accordion">
+                {/* Accordion 2: Protective Cushion Guard */}
+                <div className="border-b border-neutral-200 pb-3" id="benefits-accordion">
                   <button
                     onClick={() => setIsBenefitsOpen(!isBenefitsOpen)}
-                    className="w-full flex items-center justify-between text-left font-serif text-base font-bold text-[#2B1B15] py-2 cursor-pointer hover:text-[#C24B35] transition-colors"
+                    className="w-full flex items-center justify-between text-left font-sans text-sm font-extrabold text-neutral-900 py-2 cursor-pointer hover:text-neutral-600 transition-colors"
                   >
                     <span>Shield & Drop Protection Benefit</span>
-                    <span className="font-mono text-lg font-normal text-[#8F7D6D]">
+                    <span className="font-mono text-lg font-normal text-neutral-500">
                       {isBenefitsOpen ? '×' : '+'}
                     </span>
                   </button>
                   {isBenefitsOpen && (
-                    <p className="text-xs text-[#514339] leading-relaxed pt-2 pb-1 font-sans font-light">
+                    <p className="text-xs text-neutral-600 leading-relaxed pt-2 pb-1 font-sans font-medium">
                       {activeAssets.benefitText}
                     </p>
                   )}

@@ -28,7 +28,7 @@ export default function CheckoutModal({
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
   const taxableAmount = Math.max(0, subtotal - discount);
-  const shippingCost = 0; // Removed for trial
+  const shippingCost: number = 0; // Removed for trial
   const tax = 0; // Removed for trial
   const total = taxableAmount + shippingCost + tax;
 
@@ -317,7 +317,7 @@ export default function CheckoutModal({
           address: `${shipping.addressLine1}, ${shipping.city}, ${shipping.state} ${shipping.postalCode}`
         },
         theme: {
-          color: '#adc6ff' // Lumina Luxe primary Azure accent color
+          color: '#cfff71'
         },
         modal: {
           ondismiss: () => {
@@ -350,24 +350,24 @@ export default function CheckoutModal({
       
       {/* Dark blurry backdrop */}
       <div 
-        className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm transition-opacity"
         onClick={step !== 'authorizing' && step !== 'success' ? onClose : undefined}
       ></div>
 
       <div className="flex min-h-screen items-center justify-center p-4">
         
         {/* Core checkout frame */}
-        <div className="relative w-full max-w-4xl bg-white border border-gray-150 rounded-none shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
+        <div className="relative w-full max-w-4xl bg-[#fdfdfd]/40 backdrop-blur-3xl border border-neutral-200/60 rounded-[2rem] shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
           
           {/* Main Form Compartment (Col-7) */}
-          <div className="md:col-span-7 p-6 sm:p-8 space-y-6">
+          <div className="md:col-span-7 p-6 sm:p-8 space-y-6 bg-white/20 backdrop-blur-md rounded-l-[2rem]">
             
             {/* Header / Back Action */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <h3 className="font-sans text-lg font-bold uppercase tracking-wider text-black">Secure Portal</h3>
-                <span className="font-mono text-[9px] text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5 text-black" />
+                <h3 className="font-sans text-lg font-extrabold tracking-tight text-neutral-900">Secure Portal</h3>
+                <span className="font-mono text-[9px] text-neutral-500 uppercase tracking-widest flex items-center gap-1 font-semibold">
+                  <Lock className="w-2.5 h-2.5 text-neutral-900" />
                   <span>256-Bit SSL Encryption Authorized</span>
                 </span>
               </div>
@@ -375,7 +375,7 @@ export default function CheckoutModal({
               {step !== 'authorizing' && step !== 'success' && (
                 <button
                   onClick={onClose}
-                  className="p-1 px-2.5 text-gray-400 hover:text-black border border-gray-150 tracking-widest font-mono text-[9px] cursor-pointer"
+                  className="p-2 px-3 text-neutral-500 hover:text-neutral-900 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition-colors tracking-widest font-mono text-[9px] cursor-pointer font-bold"
                 >
                   CANCEL
                 </button>
@@ -383,26 +383,26 @@ export default function CheckoutModal({
             </div>
 
             {/* Simulated Stepper Indicators */}
-            <div className="flex items-center gap-2 pt-2 border-t border-gray-150">
+            <div className="flex items-center gap-2 pt-2 border-t border-neutral-200">
               <div className="flex items-center gap-1.5 flex-1 select-none">
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[9px] font-mono font-bold ${
-                  step === 'shipping' ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 border border-gray-100'
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-bold ${
+                  step === 'shipping' ? 'bg-[#cfff71] text-neutral-900' : 'bg-neutral-100 text-neutral-400 border border-neutral-200'
                 }`}>1</span>
-                <span className="text-[10px] font-mono tracking-wider font-bold text-black">Shipping</span>
+                <span className={`text-[10px] font-mono tracking-wider font-bold ${step === 'shipping' ? 'text-neutral-900' : 'text-neutral-400'}`}>Shipping</span>
               </div>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <ChevronRight className="w-3 h-3 text-neutral-300" />
               <div className="flex items-center gap-1.5 flex-1 select-none">
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[9px] font-mono font-bold ${
-                  step === 'payment' ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 border border-gray-100'
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-bold ${
+                  step === 'payment' ? 'bg-[#cfff71] text-neutral-900' : 'bg-neutral-100 text-neutral-400 border border-neutral-200'
                 }`}>2</span>
-                <span className="text-[10px] font-mono tracking-wider font-bold text-black">Payment</span>
+                <span className={`text-[10px] font-mono tracking-wider font-bold ${step === 'payment' ? 'text-neutral-900' : 'text-neutral-400'}`}>Payment</span>
               </div>
-              <ChevronRight className="w-3 h-3 text-gray-400" />
+              <ChevronRight className="w-3 h-3 text-neutral-300" />
               <div className="flex items-center gap-1.5 flex-1 select-none">
-                <span className={`w-5 h-5 rounded-none flex items-center justify-center text-[9px] font-mono font-bold ${
-                  step === 'success' ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 border border-gray-100'
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-bold ${
+                  step === 'success' ? 'bg-[#cfff71] text-neutral-900' : 'bg-neutral-100 text-neutral-400 border border-neutral-200'
                 }`}>3</span>
-                <span className="text-[10px] font-mono tracking-wider font-bold text-black">Receipt</span>
+                <span className={`text-[10px] font-mono tracking-wider font-bold ${step === 'success' ? 'text-neutral-900' : 'text-neutral-400'}`}>Receipt</span>
               </div>
             </div>
 
@@ -410,81 +410,81 @@ export default function CheckoutModal({
             {step === 'shipping' && (
               <form onSubmit={handleShippingSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Full Legal Name</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Full Legal Name</label>
                     <input
                       type="text"
                       value={shipping.fullName}
                       onChange={(e) => setShipping(prev => ({ ...prev, fullName: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                       placeholder="Jane Doe"
                     />
                     {validationErrors.fullName && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.fullName}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.fullName}</span>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Secure Email</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Secure Email</label>
                     <input
                       type="email"
                       value={shipping.email}
                       onChange={(e) => setShipping(prev => ({ ...prev, email: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                       placeholder="jane.doe@example.com"
                     />
                     {validationErrors.email && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.email}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.email}</span>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Billing & Delivery Coordinates</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Billing & Delivery Coordinates</label>
                   <input
                     type="text"
                     value={shipping.addressLine1}
                     onChange={(e) => setShipping(prev => ({ ...prev, addressLine1: e.target.value }))}
-                    className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                    className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                     placeholder="123 Serene Boulevard"
                   />
                   {validationErrors.addressLine1 && (
-                    <span className="text-[9px] font-mono text-red-500">{validationErrors.addressLine1}</span>
+                    <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.addressLine1}</span>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Apartment, Suite (Optional)</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Apartment, Suite (Optional)</label>
                   <input
                     type="text"
                     value={shipping.addressLine2}
                     onChange={(e) => setShipping(prev => ({ ...prev, addressLine2: e.target.value }))}
-                    className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                    className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                     placeholder="Floor 4, Penthouse 2B"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">City</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">City</label>
                     <input
                       type="text"
                       value={shipping.city}
                       onChange={(e) => setShipping(prev => ({ ...prev, city: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                       placeholder="San Francisco"
                     />
                     {validationErrors.city && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.city}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.city}</span>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">State</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">State</label>
                     <select
                       value={shipping.state}
                       onChange={(e) => setShipping(prev => ({ ...prev, state: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none cursor-pointer"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-mono text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors cursor-pointer"
                     >
                       <option value="">Select State</option>
                       <option>Andhra Pradesh</option>
@@ -519,33 +519,33 @@ export default function CheckoutModal({
                       <option>West Bengal</option>
                     </select>
                     {validationErrors.state && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.state}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.state}</span>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">PIN Code</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">PIN Code</label>
                     <input
                       type="text"
                       maxLength={6}
                       value={shipping.postalCode}
                       onChange={(e) => setShipping(prev => ({ ...prev, postalCode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                       placeholder="400001"
                     />
                     {validationErrors.postalCode && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.postalCode}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.postalCode}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Country</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Country</label>
                     <select
                       value={shipping.country}
                       onChange={(e) => setShipping(prev => ({ ...prev, country: e.target.value }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-mono text-black focus:outline-none focus:border-black rounded-none cursor-pointer"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-mono text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors cursor-pointer"
                     >
                       <option>India</option>
                       <option>United States</option>
@@ -555,90 +555,92 @@ export default function CheckoutModal({
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Mobile Number</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-500">Mobile Number</label>
                     <input
                       type="text"
                       maxLength={10}
                       value={shipping.phone}
                       onChange={(e) => setShipping(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                      className="w-full bg-white border border-gray-100 px-3.5 py-2 text-xs font-sans text-black focus:outline-none focus:border-black rounded-none"
+                      className="w-full bg-white/20 backdrop-blur-sm border border-neutral-200 px-3.5 py-2.5 text-sm font-semibold font-sans text-neutral-900 focus:outline-none focus:border-neutral-400 focus:bg-white/60 rounded-xl shadow-inner-sm transition-colors"
                       placeholder="9876543210"
                     />
                     {validationErrors.phone && (
-                      <span className="text-[9px] font-mono text-red-500">{validationErrors.phone}</span>
+                      <span className="text-[9px] font-mono text-red-500 font-semibold">{validationErrors.phone}</span>
                     )}
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-black hover:opacity-85 text-white font-mono text-xs uppercase tracking-widest mt-6 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-sans font-extrabold text-[13px] uppercase tracking-wider mt-6 cursor-pointer flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm active:scale-[0.98]"
                 >
                   <span>Lock Delivery Coordinates</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </form>
-            )}            {/* STEP 2: PAYMENT COMPARTMENT */}
+            )}
+
+            {/* STEP 2: PAYMENT COMPARTMENT */}
             {step === 'payment' && (
               <form onSubmit={handleRazorpayCheckout} className="space-y-6">
                 <button
                   type="button"
                   onClick={() => setStep('shipping')}
-                  className="inline-flex items-center gap-1 text-[10px] font-mono text-[#c1c6d7] hover:text-white mb-2 focus:outline-none cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-neutral-500 hover:text-neutral-900 mb-2 focus:outline-none cursor-pointer bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md border border-neutral-200"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Return to Shipping Profile</span>
                 </button>
 
                 {checkoutError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-500 text-xs flex items-center gap-2">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 shrink-0" />
-                    <span>{checkoutError}</span>
+                    <span className="font-semibold">{checkoutError}</span>
                   </div>
                 )}
 
                 {/* Digital Graphic Mockup showing Razorpay Gateway */}
-                <div className="w-full bg-[#1c1c1e] text-white p-6 rounded-3xl border border-white/10 flex flex-col justify-between aspect-[1.7/1] relative overflow-hidden shadow-xl">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#adc6ff]/5 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+                <div className="w-full bg-neutral-900 text-white p-6 rounded-3xl border border-neutral-800 flex flex-col justify-between aspect-[1.7/1] relative overflow-hidden shadow-xl">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#cfff71]/10 rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none blur-3xl"></div>
                   
-                  <div className="flex justify-between items-start">
-                    <span className="font-mono text-[9px] tracking-widest text-[#c1c6d7] uppercase">SECURE CHECKOUT GATEWAY</span>
-                    <Lock className="w-4 h-4 text-[#adc6ff]" />
+                  <div className="flex justify-between items-start relative z-10">
+                    <span className="font-mono text-[9px] font-bold tracking-widest text-neutral-400 uppercase">SECURE CHECKOUT GATEWAY</span>
+                    <Lock className="w-4 h-4 text-[#cfff71]" />
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 relative z-10">
                     <div>
-                      <span className="text-[10px] text-neutral-400 block tracking-wider uppercase font-mono">Amount Payable</span>
-                      <div className="text-2xl font-extrabold text-[#adc6ff] font-mono mt-1">
+                      <span className="text-[10px] text-neutral-400 block tracking-wider uppercase font-mono font-semibold">Amount Payable</span>
+                      <div className="text-2xl font-extrabold text-white font-mono mt-1">
                         ₹{total.toLocaleString('en-IN')}
                       </div>
                     </div>
                     
-                    <div className="flex justify-between font-mono text-[9px] text-[#c1c6d7] uppercase tracking-widest">
+                    <div className="flex justify-between font-mono text-[9px] text-neutral-400 uppercase tracking-widest">
                       <div>
-                        <span>Client Reference</span>
-                        <span className="text-white block font-medium mt-0.5">{shipping.fullName || 'GUEST CUSTOMER'}</span>
+                        <span className="font-semibold">Client Reference</span>
+                        <span className="text-white block font-bold mt-0.5">{shipping.fullName || 'GUEST CUSTOMER'}</span>
                       </div>
                       <div>
-                        <span>Currency</span>
-                        <span className="text-white block font-medium mt-0.5">INR (₹)</span>
+                        <span className="font-semibold">Currency</span>
+                        <span className="text-white block font-bold mt-0.5">INR (₹)</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Razorpay Gateway Description Badge */}
-                <div className="flex items-center gap-3 bg-neutral-900 border border-white/5 p-4 text-[10px] font-mono text-[#c1c6d7] rounded-2xl">
-                  <CreditCard className="w-5 h-5 text-[#adc6ff] shrink-0" />
+                <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200 p-4 text-[10px] font-mono font-medium text-neutral-600 rounded-2xl">
+                  <CreditCard className="w-5 h-5 text-neutral-900 shrink-0" />
                   <span>Razorpay handles all payments securely. We accept UPI (GooglePay, PhonePe, Paytm), RuPay, Visa, Mastercard, Netbanking, and Wallets.</span>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-[#adc6ff] hover:bg-[#adc6ff]/90 text-[#002e69] font-bold text-xs uppercase tracking-widest mt-6 cursor-pointer flex items-center justify-center gap-2 rounded-full transition-all shadow-lg active:scale-98"
+                  className="w-full py-4 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-sans font-extrabold text-[13px] uppercase tracking-widest mt-6 cursor-pointer flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm active:scale-[0.98]"
                 >
-                  <Lock className="w-3.5 h-3.5 text-[#002e69]" />
+                  <Lock className="w-4 h-4" />
                   <span>Pay with Razorpay (₹{total.toLocaleString('en-IN')})</span>
                 </button>
               </form>
@@ -647,13 +649,13 @@ export default function CheckoutModal({
             {/* STEP 3: PROCESSING LOCK / AUTHORIZING */}
             {step === 'authorizing' && (
               <div className="h-96 flex flex-col items-center justify-center space-y-6">
-                <Loader2 className="w-12 h-12 text-black animate-spin" />
+                <Loader2 className="w-12 h-12 text-[#cfff71] animate-spin drop-shadow-sm" />
                 <div className="text-center space-y-1">
-                  <h4 className="font-sans text-lg font-bold text-black uppercase">Processing Payment</h4>
-                  <p className="text-xs text-gray-400 font-mono uppercase">Verifying banking handshakes...</p>
+                  <h4 className="font-sans text-lg font-extrabold text-neutral-900 uppercase">Processing Payment</h4>
+                  <p className="text-xs text-neutral-500 font-mono uppercase font-bold">Verifying banking handshakes...</p>
                 </div>
 
-                <div className="w-full max-w-sm bg-neutral-900 text-green-400 p-4 rounded-none text-[10px] font-mono space-y-1.5 shadow-inner">
+                <div className="w-full max-w-sm bg-neutral-900 text-[#cfff71] p-4 rounded-2xl text-[10px] font-mono font-semibold space-y-1.5 shadow-inner">
                   {authLogs.map((log, i) => (
                     <div key={i} className="animate-fade-in truncate">{log}</div>
                   ))}
@@ -666,91 +668,91 @@ export default function CheckoutModal({
             {step === 'success' && completedOrder && (
               <div className="space-y-6">
                 <div className="text-center space-y-3">
-                  <div className="w-14 h-14 bg-black rounded-none flex items-center justify-center mx-auto text-white">
-                    <Check className="w-8 h-8 font-bold" />
+                  <div className="w-14 h-14 bg-[#cfff71] rounded-2xl flex items-center justify-center mx-auto text-neutral-900 shadow-sm border border-[#bceb5e]">
+                    <Check className="w-8 h-8 font-extrabold" />
                   </div>
-                  <h4 className="font-sans text-xl font-extrabold text-black uppercase tracking-wider italic">Secure Order Authorized</h4>
-                  <p className="text-slate-500 text-xs sm:text-sm font-sans leading-relaxed">
+                  <h4 className="font-sans text-xl font-extrabold text-neutral-900 uppercase tracking-wider italic">Secure Order Authorized</h4>
+                  <p className="text-neutral-500 text-xs sm:text-sm font-sans font-medium leading-relaxed max-w-sm mx-auto">
                     Thank you, {completedOrder.shipping.fullName}. Your handcrafted protection case is locked and entering processing queues. Standard delivery notification manifests will arrive in your email cabinet.
                   </p>
                 </div>
 
                 {/* Spline 3D Interactive Delivery Animation */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-mono font-bold uppercase text-gray-400 tracking-widest block text-center">
+                  <span className="text-[10px] font-mono font-bold uppercase text-neutral-400 tracking-widest block text-center">
                     // Interactive 3D Delivery Dispatch Box
                   </span>
-                  <div className="w-full h-[280px] bg-slate-50 border-2 border-dashed border-gray-200 rounded-none overflow-hidden relative shadow-inner">
+                  <div className="w-full h-[280px] bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-2xl overflow-hidden relative shadow-inner-sm">
                     <iframe 
                       src="https://my.spline.design/deliverybox-vzNOt2NdKMBmCjYsDCwzL1vw/" 
                       className="w-full h-full pointer-events-auto"
                       title="3D Active Delivery Box"
                       loading="lazy"
                     />
-                    <div className="absolute top-3 left-3 bg-black text-white text-[9px] font-mono font-bold px-2 py-0.5 pointer-events-none uppercase tracking-widest">
+                    <div className="absolute top-3 left-3 bg-white border border-neutral-200 text-neutral-900 text-[9px] font-mono font-bold px-2.5 py-1 rounded-lg pointer-events-none uppercase tracking-widest shadow-sm">
                       Live Delivery Lab
                     </div>
-                    <div className="absolute bottom-3 right-3 bg-black/85 text-neutral-300 text-[8px] font-mono px-2 py-1 pointer-events-none uppercase tracking-widest select-none">
+                    <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm border border-neutral-200 text-neutral-600 text-[8px] font-mono font-bold px-2.5 py-1.5 rounded-lg pointer-events-none uppercase tracking-widest select-none shadow-sm">
                       Drag to rotate box • Pinch to zoom
                     </div>
                   </div>
                 </div>
 
                 {/* Full formal summary receipt */}
-                <div className="bg-gray-50 p-6 border border-gray-150 space-y-4">
-                  <div className="flex justify-between items-start text-xs font-mono pb-2.5 border-b border-gray-150">
+                <div className="bg-neutral-50 p-6 border border-neutral-200 rounded-2xl space-y-4">
+                  <div className="flex justify-between items-start text-xs font-mono pb-3 border-b border-neutral-200">
                     <div>
-                      <h5 className="font-bold text-black uppercase tracking-wider mb-1 border-b border-black inline-block">Tax Invoice</h5>
-                      <p className="text-[9px] text-gray-500 mb-2">Issued by: Yogantak (GSTIN: 29XXXXX0000X1Z5)</p>
-                      <span className="text-gray-400">Order Reference:</span>
-                      <strong className="text-black block mt-0.5">{completedOrder.id}</strong>
+                      <h5 className="font-bold text-neutral-900 uppercase tracking-wider mb-1">Tax Invoice</h5>
+                      <p className="text-[9px] text-neutral-500 font-semibold mb-2">Issued by: Yogantak (GSTIN: 29XXXXX0000X1Z5)</p>
+                      <span className="text-neutral-500 font-semibold">Order Reference:</span>
+                      <strong className="text-neutral-900 block mt-0.5">{completedOrder.id}</strong>
                     </div>
                     <div className="text-right">
-                      <span className="text-gray-400">Manifest Date:</span>
-                      <strong className="text-black block mt-0.5">{completedOrder.date}</strong>
+                      <span className="text-neutral-500 font-semibold">Manifest Date:</span>
+                      <strong className="text-neutral-900 block mt-0.5">{completedOrder.date}</strong>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <span className="text-[10px] font-mono uppercase text-gray-400 tracking-wider block">Deliver To:</span>
-                    <p className="text-xs font-sans text-black leading-snug">
+                    <span className="text-[10px] font-mono font-bold uppercase text-neutral-400 tracking-wider block">Deliver To:</span>
+                    <p className="text-xs font-sans font-semibold text-neutral-900 leading-snug">
                       {completedOrder.shipping.fullName} <br />
                       {completedOrder.shipping.addressLine1}, {completedOrder.shipping.addressLine2 && `${completedOrder.shipping.addressLine2}, `} <br />
                       {completedOrder.shipping.city}, {completedOrder.shipping.state} {completedOrder.shipping.postalCode}, {completedOrder.shipping.country}
                     </p>
                   </div>
 
-                  <div className="space-y-3 pt-3 border-t border-gray-150">
-                    <span className="text-[10px] font-mono uppercase text-gray-400 tracking-wider block">Cart items:</span>
+                  <div className="space-y-3 pt-3 border-t border-neutral-200">
+                    <span className="text-[10px] font-mono font-bold uppercase text-neutral-400 tracking-wider block">Cart items:</span>
                     {completedOrder.items.map((item, id) => (
-                      <div key={id} className="flex justify-between text-xs text-slate-500">
-                        <span>
+                      <div key={id} className="flex justify-between text-xs text-neutral-600">
+                        <span className="font-semibold">
                           {item.product.name} (x{item.quantity})
-                          <small className="block text-[10px] text-gray-400 font-mono mt-0.5">
+                          <small className="block text-[10px] text-neutral-400 font-mono mt-0.5 font-bold">
                             {item.selectedModel} • {item.selectedMaterial.replace('Premium ', '')}
                           </small>
                         </span>
-                        <strong className="text-black font-mono font-bold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</strong>
+                        <strong className="text-neutral-900 font-mono font-extrabold">₹{(item.price * item.quantity).toLocaleString('en-IN')}</strong>
                       </div>
                     ))}
                   </div>
 
-                  <div className="pt-3 border-t border-dashed border-gray-150 space-y-1 font-mono text-xs text-right">
+                  <div className="pt-3 border-t border-dashed border-neutral-300 space-y-1.5 font-mono text-xs text-right font-medium">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Subtotal:</span>
-                      <span>₹{completedOrder.subtotal.toLocaleString('en-IN')}</span>
+                      <span className="text-neutral-500 font-semibold">Subtotal:</span>
+                      <span className="text-neutral-900 font-bold">₹{completedOrder.subtotal.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Shipping Cost:</span>
-                      <span>{completedOrder.shippingCost === 0 ? 'FREE' : `₹${completedOrder.shippingCost.toLocaleString('en-IN')}`}</span>
+                      <span className="text-neutral-500 font-semibold">Shipping Cost:</span>
+                      <span className="text-neutral-900 font-bold">{completedOrder.shippingCost === 0 ? 'FREE' : `₹${completedOrder.shippingCost.toLocaleString('en-IN')}`}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">GST Tax (5%):</span>
-                      <span>₹{completedOrder.tax.toLocaleString('en-IN')}</span>
+                      <span className="text-neutral-500 font-semibold">GST Tax (5%):</span>
+                      <span className="text-neutral-900 font-bold">₹{completedOrder.tax.toLocaleString('en-IN')}</span>
                     </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-gray-150">
-                      <strong className="font-mono font-bold text-black uppercase">Total Charge Authorized:</strong>
-                      <strong className="font-mono font-bold text-black text-lg">₹{completedOrder.total.toLocaleString('en-IN')}</strong>
+                    <div className="flex justify-between text-sm pt-2.5 mt-1 border-t border-neutral-200">
+                      <strong className="font-mono font-extrabold text-neutral-900 uppercase">Total Charge Authorized:</strong>
+                      <strong className="font-mono font-extrabold text-[#95c52c] text-lg">₹{completedOrder.total.toLocaleString('en-IN')}</strong>
                     </div>
                   </div>
                 </div>
@@ -761,13 +763,13 @@ export default function CheckoutModal({
                       onClose();
                       setStep('shipping');
                     }}
-                    className="w-full py-4.5 bg-black hover:opacity-85 text-white font-mono text-xs uppercase tracking-widest cursor-pointer text-center rounded-none transition-opacity"
+                    className="w-full py-3.5 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-sans font-extrabold text-[11px] uppercase tracking-wider cursor-pointer text-center rounded-xl transition-all shadow-sm active:scale-[0.98]"
                   >
                     Continue Styling Collections
                   </button>
                   <button
                     onClick={() => window.print()}
-                    className="w-full py-4.5 bg-transparent border border-black text-black hover:bg-gray-100 font-mono text-xs uppercase tracking-widest cursor-pointer flex items-center justify-center gap-2 rounded-none transition-colors"
+                    className="w-full py-3.5 bg-white border border-neutral-200 text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 font-sans font-extrabold text-[11px] uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 rounded-xl transition-all shadow-sm"
                   >
                     <FileText className="w-4 h-4" />
                     <span>Print Bill Statement</span>
@@ -779,93 +781,93 @@ export default function CheckoutModal({
           </div>
 
           {/* Secure Right Summary Column (Col-5) */}
-          <div className="md:col-span-5 bg-gray-50 p-6 sm:p-8 border-l md:border-t-0 border-t border-gray-150 flex flex-col justify-between">
+          <div className="md:col-span-5 bg-neutral-50/50 p-6 sm:p-8 border-t md:border-t-0 md:border-l border-neutral-200/50 flex flex-col h-full justify-between">
             {step !== 'success' ? (
               <div className="space-y-6">
-                <div className="pb-4 border-b border-gray-100">
-                  <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-black">Itemized Summary</h4>
-                  <span className="font-mono text-[10px] text-gray-400 uppercase tracking-wider">{cart.length} unique designs</span>
+                <div className="pb-4 border-b border-neutral-200">
+                  <h4 className="font-sans text-xs font-extrabold uppercase tracking-wider text-neutral-900">Itemized Summary</h4>
+                  <span className="font-mono font-bold text-[10px] text-neutral-500 uppercase tracking-wider">{cart.length} unique designs</span>
                 </div>
 
                 {/* Mini cases map */}
                 <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex gap-3 items-center text-xs">
-                      <span className="text-white font-mono font-bold bg-black w-6 h-6 flex items-center justify-center rounded-none flex-shrink-0 text-[10px]">
+                      <span className="text-neutral-900 font-mono font-bold bg-neutral-200 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 text-[11px]">
                         {item.quantity}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <strong className="text-black block truncate leading-tight font-sans text-xs uppercase tracking-wide">{item.product.name}</strong>
-                        <span className="text-[10px] font-mono text-gray-400 block truncate">{item.selectedModel}</span>
+                        <strong className="text-neutral-900 block truncate leading-tight font-sans text-xs font-bold uppercase tracking-wide">{item.product.name}</strong>
+                        <span className="text-[10px] font-mono font-semibold text-neutral-500 block truncate">{item.selectedModel}</span>
                       </div>
-                      <span className="font-mono text-black font-bold flex-shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                      <span className="font-mono text-neutral-900 font-extrabold flex-shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Coupon Code Input */}
-                <div className="border-t border-gray-150 pt-4 space-y-2">
-                  <span className="text-[10px] font-mono uppercase text-gray-400 tracking-wider block">Apply Promo Coupon</span>
+                <div className="border-t border-neutral-200 pt-4 space-y-2">
+                  <span className="text-[10px] font-mono font-bold uppercase text-neutral-500 tracking-wider block">Apply Promo Coupon</span>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       placeholder="e.g. WELCOME10"
                       value={promoCode}
                       onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      className="flex-1 bg-white border border-gray-200 px-3 py-1.5 text-xs font-mono uppercase text-black focus:outline-none focus:border-black rounded-none"
+                      className="flex-1 bg-white border border-neutral-200 px-3.5 py-2 text-xs font-mono font-semibold uppercase text-neutral-900 focus:outline-none focus:border-neutral-400 rounded-xl shadow-inner-sm transition-colors"
                     />
                     <button
                       type="button"
                       onClick={handleApplyCoupon}
-                      className="px-4 py-1.5 bg-black hover:opacity-85 text-white text-xs font-mono uppercase tracking-wider cursor-pointer"
+                      className="px-4 py-2 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-sans font-extrabold text-[11px] uppercase tracking-wider cursor-pointer rounded-xl transition-colors shadow-sm"
                     >
                       Apply
                     </button>
                   </div>
                   {couponError && (
-                    <span className="text-[9px] font-mono text-red-500 block">{couponError}</span>
+                    <span className="text-[9px] font-mono font-semibold text-red-500 block">{couponError}</span>
                   )}
                   {appliedCoupon && (
-                    <span className="text-[9px] font-mono text-green-700 block font-semibold">
+                    <span className="text-[10px] font-mono text-emerald-600 block font-bold bg-emerald-50 border border-emerald-100 p-2 rounded-lg">
                       ✓ Coupon Applied: {appliedCoupon.code} (-₹{appliedCoupon.discount.toLocaleString('en-IN')})
                     </span>
                   )}
                 </div>
 
                 {/* Subsidaries listing */}
-                <div className="border-t border-gray-100 pt-4 space-y-1.5 font-mono text-xs">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Items Subtotal:</span>
-                    <span>₹{subtotal.toLocaleString('en-IN')}</span>
+                <div className="border-t border-neutral-200 pt-4 space-y-2 font-mono text-xs font-medium">
+                  <div className="flex justify-between text-neutral-600">
+                    <span className="font-semibold">Items Subtotal:</span>
+                    <span className="font-bold text-neutral-900">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Express Shipping:</span>
-                    <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost.toLocaleString('en-IN')}`}</span>
+                  <div className="flex justify-between text-neutral-600">
+                    <span className="font-semibold">Express Shipping:</span>
+                    <span className="font-bold text-neutral-900 bg-[#cfff71]/30 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider">{shippingCost === 0 ? 'FREE' : `₹${shippingCost.toLocaleString('en-IN')}`}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>GST Surcharge (18%):</span>
-                    <span>₹{tax.toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between text-neutral-600">
+                    <span className="font-semibold">GST Surcharge (18%):</span>
+                    <span className="font-bold text-neutral-900">₹{tax.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between text-sm pt-2.5 border-t border-dashed border-gray-150">
-                    <strong className="font-mono font-bold text-black uppercase">Full Balance Total:</strong>
-                    <strong className="font-mono text-lg font-bold text-black">₹{total.toLocaleString('en-IN')}</strong>
+                  <div className="flex justify-between items-end text-sm pt-3 border-t border-dashed border-neutral-300">
+                    <strong className="font-sans font-extrabold text-neutral-900 uppercase text-xs tracking-wider">Full Balance Total:</strong>
+                    <strong className="font-mono text-2xl font-extrabold text-neutral-900 leading-none">₹{total.toLocaleString('en-IN')}</strong>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="h-full flex flex-col justify-center items-center text-center p-4 space-y-4">
-                <BadgeCheck className="w-12 h-12 text-black" />
-                <h5 className="font-sans text-xs font-bold uppercase tracking-wider text-black">Vault cleared securely</h5>
-                <p className="text-[10px] text-gray-400 font-mono uppercase tracking-[0.2em] leading-relaxed">
+                <BadgeCheck className="w-12 h-12 text-[#95c52c]" />
+                <h5 className="font-sans text-xs font-extrabold uppercase tracking-wider text-neutral-900">Vault cleared securely</h5>
+                <p className="text-[10px] text-neutral-500 font-mono font-bold uppercase tracking-[0.2em] leading-relaxed">
                   YOGANTAK Security algorithms automatically cleared payment details. Safe. Trusted. Verified.
                 </p>
                 
                 {/* Embedded Mini 3D Box Preview inside success side panel */}
-                <div className="w-full border-t border-gray-150 pt-4 space-y-2">
-                  <span className="text-[9px] font-mono uppercase text-gray-400 tracking-widest block">
+                <div className="w-full border-t border-neutral-200 pt-4 space-y-2">
+                  <span className="text-[9px] font-mono font-bold uppercase text-neutral-400 tracking-widest block">
                     Your Package Vault
                   </span>
-                  <div className="w-full h-[155px] bg-white border border-gray-200 rounded-none overflow-hidden relative shadow-xs">
+                  <div className="w-full h-[155px] bg-white border border-neutral-200 rounded-xl overflow-hidden relative shadow-sm">
                     <iframe 
                       src="https://my.spline.design/deliverybox-vzNOt2NdKMBmCjYsDCwzL1vw/" 
                       className="w-full h-full pointer-events-auto"
@@ -878,10 +880,10 @@ export default function CheckoutModal({
             )}
 
             {/* Shield and locks reassurance footer always absolute at bottom of col-5 */}
-            <div className="pt-6 border-t border-gray-100 text-[9.5px] font-mono text-gray-400 space-y-2">
-              <div className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-black" />
-                <span className="font-bold">HTTPS CERTIFICATION</span>
+            <div className="pt-6 border-t border-neutral-200 text-[9.5px] font-mono text-neutral-500 space-y-2 font-medium mt-6">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-neutral-900" />
+                <span className="font-extrabold text-neutral-900">HTTPS CERTIFICATION</span>
               </div>
               <p className="leading-tight">
                 All transmissions are padded under strict banking SSL/TLS protocols. We represent direct compliance with PCI-DSS guidelines.

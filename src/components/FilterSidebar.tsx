@@ -152,15 +152,15 @@ export default function FilterSidebar({
     inStockFilter;
 
   return (
-    <div className="w-full bg-[#18181b]/40 backdrop-blur-sm text-white p-6 rounded-3xl border border-neutral-800/85 shadow-xl font-sans">
+    <div className="w-full bg-[#fdfdfd]/40 backdrop-blur-3xl text-neutral-900 p-6 rounded-[2rem] border border-neutral-200/60 shadow-sm font-sans">
       
       {/* Sidebar Header */}
-      <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4 mb-6">
-        <span className="text-lg font-bold tracking-tight">Filters</span>
+      <div className="flex items-center justify-between border-b border-neutral-100 pb-4 mb-6">
+        <span className="text-lg font-extrabold tracking-tight">Filters</span>
         {hasActiveFilters && (
           <button
             onClick={resetAll}
-            className="flex items-center gap-1 text-xs text-[#adc6ff] hover:text-white transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-xs font-bold text-neutral-500 hover:text-neutral-900 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Clear All</span>
@@ -171,10 +171,10 @@ export default function FilterSidebar({
       <div className="space-y-6">
         
         {/* SECTION 1: DEVICE (Size) Accordion */}
-        <div className="border-b border-neutral-800/60 pb-5">
+        <div className="border-b border-neutral-100 pb-5">
           <button
             onClick={() => toggleSection('device')}
-            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-400 hover:text-white transition-colors focus:outline-none"
+            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-500 hover:text-neutral-900 transition-colors focus:outline-none cursor-pointer"
           >
             <span>Device</span>
             {openSections.device ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -189,9 +189,9 @@ export default function FilterSidebar({
                   placeholder="Search device..."
                   value={deviceSearchQuery}
                   onChange={(e) => setDeviceSearchQuery(e.target.value)}
-                  className="w-full bg-[#202024]/60 border border-neutral-800/80 text-white rounded-xl py-2 pl-9 pr-4 text-xs focus:outline-none focus:border-[#adc6ff] transition-colors placeholder-neutral-500"
+                  className="w-full bg-neutral-50 border border-neutral-200 text-neutral-900 rounded-xl py-2 pl-9 pr-4 text-xs font-semibold focus:outline-none focus:border-neutral-400 transition-colors placeholder-neutral-400 shadow-inner-sm"
                 />
-                <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
 
               {/* Checkboxes List */}
@@ -200,23 +200,23 @@ export default function FilterSidebar({
                   const isChecked = selectedModels.includes(model);
                   const count = getModelCount(model);
                   return (
-                    <label key={model} className="flex items-center justify-between text-xs text-neutral-300 hover:text-white cursor-pointer select-none">
+                    <label key={model} className="flex items-center justify-between text-xs font-semibold text-neutral-600 hover:text-neutral-900 cursor-pointer select-none">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleDeviceChange(model)}
-                          className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-[#adc6ff] accent-[#adc6ff] focus:ring-[#adc6ff] cursor-pointer"
+                          className="w-4 h-4 rounded border-neutral-300 bg-white text-black accent-black focus:ring-black cursor-pointer"
                         />
                         <span>{model}</span>
                       </div>
-                      <span className="text-[10px] text-neutral-500 font-mono">({count})</span>
+                      <span className="text-[10px] text-neutral-400 font-mono">({count})</span>
                     </label>
                   );
                 })}
 
                 {filteredModels.length === 0 && (
-                  <p className="text-xs text-neutral-500 text-center py-2 font-mono">No devices found</p>
+                  <p className="text-xs text-neutral-400 text-center py-2 font-mono">No devices found</p>
                 )}
               </div>
 
@@ -224,7 +224,7 @@ export default function FilterSidebar({
               {filteredModels.length > 5 && (
                 <button
                   onClick={() => setShowAllDevices(!showAllDevices)}
-                  className="text-xs font-semibold text-[#adc6ff] hover:underline hover:text-white cursor-pointer mt-1"
+                  className="text-xs font-bold text-neutral-900 hover:underline cursor-pointer mt-1"
                 >
                   {showAllDevices ? 'Show Less' : `+ Show More (${filteredModels.length - 5})`}
                 </button>
@@ -234,10 +234,10 @@ export default function FilterSidebar({
         </div>
 
         {/* SECTION 2: CASE TYPE Accordion */}
-        <div className="border-b border-neutral-800/60 pb-5">
+        <div className="border-b border-neutral-100 pb-5">
           <button
             onClick={() => toggleSection('caseType')}
-            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-400 hover:text-white transition-colors focus:outline-none"
+            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-500 hover:text-neutral-900 transition-colors focus:outline-none cursor-pointer"
           >
             <span>Case Type</span>
             {openSections.caseType ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -249,17 +249,17 @@ export default function FilterSidebar({
                 const isChecked = selectedCaseTypes.includes(type);
                 const count = getCaseTypeCount(type);
                 return (
-                  <label key={type} className="flex items-center justify-between text-xs text-neutral-300 hover:text-white cursor-pointer select-none">
+                  <label key={type} className="flex items-center justify-between text-xs font-semibold text-neutral-600 hover:text-neutral-900 cursor-pointer select-none">
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleCaseTypeChange(type)}
-                        className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-[#adc6ff] accent-[#adc6ff] focus:ring-[#adc6ff] cursor-pointer"
+                        className="w-4 h-4 rounded border-neutral-300 bg-white text-black accent-black focus:ring-black cursor-pointer"
                       />
                       <span>{type}</span>
                     </div>
-                    <span className="text-[10px] text-neutral-500 font-mono">({count})</span>
+                    <span className="text-[10px] text-neutral-400 font-mono">({count})</span>
                   </label>
                 );
               })}
@@ -268,10 +268,10 @@ export default function FilterSidebar({
         </div>
 
         {/* SECTION 3: MATERIAL Accordion */}
-        <div className="border-b border-neutral-800/60 pb-5">
+        <div className="border-b border-neutral-100 pb-5">
           <button
             onClick={() => toggleSection('material')}
-            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-400 hover:text-white transition-colors focus:outline-none"
+            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-500 hover:text-neutral-900 transition-colors focus:outline-none cursor-pointer"
           >
             <span>Material</span>
             {openSections.material ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -283,17 +283,17 @@ export default function FilterSidebar({
                 const isChecked = selectedMaterials.includes(mat.value);
                 const count = getMaterialCount(mat.value);
                 return (
-                  <label key={mat.value} className="flex items-center justify-between text-xs text-neutral-300 hover:text-white cursor-pointer select-none">
+                  <label key={mat.value} className="flex items-center justify-between text-xs font-semibold text-neutral-600 hover:text-neutral-900 cursor-pointer select-none">
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleMaterialChange(mat.value)}
-                        className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-[#adc6ff] accent-[#adc6ff] focus:ring-[#adc6ff] cursor-pointer"
+                        className="w-4 h-4 rounded border-neutral-300 bg-white text-black accent-black focus:ring-black cursor-pointer"
                       />
                       <span>{mat.label}</span>
                     </div>
-                    <span className="text-[10px] text-neutral-500 font-mono">({count})</span>
+                    <span className="text-[10px] text-neutral-400 font-mono">({count})</span>
                   </label>
                 );
               })}
@@ -302,10 +302,10 @@ export default function FilterSidebar({
         </div>
 
         {/* SECTION 4: COLOR Accordion */}
-        <div className="border-b border-neutral-800/60 pb-5">
+        <div className="border-b border-neutral-100 pb-5">
           <button
             onClick={() => toggleSection('color')}
-            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-400 hover:text-white transition-colors focus:outline-none"
+            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-500 hover:text-neutral-900 transition-colors focus:outline-none cursor-pointer"
           >
             <span>Color</span>
             {openSections.color ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -323,8 +323,8 @@ export default function FilterSidebar({
                       title={col.name}
                       className={`w-8 h-8 rounded-full border transition-all cursor-pointer hover:scale-110 flex items-center justify-center ${
                         isSelected 
-                          ? 'border-white ring-2 ring-[#adc6ff]/50 scale-105 shadow-md' 
-                          : 'border-neutral-800 hover:border-neutral-500'
+                          ? 'border-transparent ring-2 ring-black scale-105 shadow-md' 
+                          : 'border-neutral-200 hover:border-neutral-400'
                       } ${col.bgClass}`}
                     >
                       {isSelected && (
@@ -339,10 +339,10 @@ export default function FilterSidebar({
         </div>
 
         {/* SECTION 5: PRICE RANGE Accordion */}
-        <div className="border-b border-neutral-800/60 pb-5">
+        <div className="border-b border-neutral-100 pb-5">
           <button
             onClick={() => toggleSection('price')}
-            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-400 hover:text-white transition-colors focus:outline-none"
+            className="w-full flex items-center justify-between text-sm font-bold tracking-wide uppercase text-neutral-500 hover:text-neutral-900 transition-colors focus:outline-none cursor-pointer"
           >
             <span>Price Range</span>
             {openSections.price ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -358,9 +358,9 @@ export default function FilterSidebar({
                   max="10000"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(parseInt(e.target.value))}
-                  className="w-full custom-slider"
+                  className="w-full custom-slider light-mode-slider"
                 />
-                <div className="flex justify-between text-[10px] font-mono text-neutral-450 mt-1">
+                <div className="flex justify-between text-[10px] font-mono font-bold text-neutral-400 mt-1">
                   <span>Min: ₹0</span>
                   <span>Max Limit: ₹10,000</span>
                 </div>
@@ -369,30 +369,30 @@ export default function FilterSidebar({
               {/* Price Range Input Boxes */}
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <span className="text-[10px] text-neutral-400 uppercase tracking-wider block mb-1">Min</span>
+                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Min</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">₹</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-bold font-mono">₹</span>
                     <input
                       type="number"
                       min="0"
                       max={maxPrice}
                       value={minPrice}
                       onChange={(e) => setMinPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2 pl-7 pr-3 text-xs text-white focus:outline-none focus:border-[#adc6ff] font-mono"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 pl-7 pr-3 text-xs font-semibold text-neutral-900 focus:outline-none focus:border-neutral-400 font-mono shadow-inner-sm"
                     />
                   </div>
                 </div>
                 <div className="flex-1">
-                  <span className="text-[10px] text-neutral-400 uppercase tracking-wider block mb-1">Max</span>
+                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block mb-1">Max</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500 font-bold font-mono">₹</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-bold font-mono">₹</span>
                     <input
                       type="number"
                       min={minPrice}
                       max="10000"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(Math.min(10000, parseInt(e.target.value) || 10000))}
-                      className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2 pl-7 pr-3 text-xs text-white focus:outline-none focus:border-[#adc6ff] font-mono"
+                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 pl-7 pr-3 text-xs font-semibold text-neutral-900 focus:outline-none focus:border-neutral-400 font-mono shadow-inner-sm"
                     />
                   </div>
                 </div>
@@ -406,10 +406,10 @@ export default function FilterSidebar({
           {/* Toggle 1: MagSafe */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold block">MagSafe Compatible</span>
-              <span className="text-[10px] text-neutral-450 block mt-0.5">Filter magnetic accessories</span>
+              <span className="text-xs font-bold text-neutral-900 block">MagSafe Compatible</span>
+              <span className="text-[10px] text-neutral-500 block mt-0.5">Filter magnetic accessories</span>
             </div>
-            <label className="custom-switch">
+            <label className="custom-switch light-mode-switch">
               <input
                 type="checkbox"
                 checked={magsafeFilter}
@@ -422,10 +422,10 @@ export default function FilterSidebar({
           {/* Toggle 2: Wireless Charging */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold block">Wireless Charging</span>
-              <span className="text-[10px] text-neutral-450 block mt-0.5">Filter Qi charging shells</span>
+              <span className="text-xs font-bold text-neutral-900 block">Wireless Charging</span>
+              <span className="text-[10px] text-neutral-500 block mt-0.5">Filter Qi charging shells</span>
             </div>
-            <label className="custom-switch">
+            <label className="custom-switch light-mode-switch">
               <input
                 type="checkbox"
                 checked={wirelessFilter}
@@ -438,10 +438,10 @@ export default function FilterSidebar({
           {/* Toggle 3: In Stock Only */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold block">In Stock Only</span>
-              <span className="text-[10px] text-neutral-450 block mt-0.5">Filter available drop-guards</span>
+              <span className="text-xs font-bold text-neutral-900 block">In Stock Only</span>
+              <span className="text-[10px] text-neutral-500 block mt-0.5">Filter available drop-guards</span>
             </div>
-            <label className="custom-switch">
+            <label className="custom-switch light-mode-switch">
               <input
                 type="checkbox"
                 checked={inStockFilter}
@@ -462,7 +462,7 @@ export default function FilterSidebar({
                 listElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
             }}
-            className="w-full py-3 bg-[#adc6ff] hover:bg-[#adc6ff]/90 text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer hover:shadow-indigo-500/10 active:scale-[0.98]"
+            className="w-full py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer active:scale-[0.98]"
           >
             Apply Filters
           </button>

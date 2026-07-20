@@ -1,5 +1,6 @@
-// Export adminAuth variable that will be initialized dynamically if credentials are found
+// Export adminAuth and adminDb variables that will be initialized dynamically if credentials are found
 export let adminAuth: any = null;
+export let adminDb: any = null;
 
 async function initializeFirebaseAdmin() {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY
@@ -11,6 +12,7 @@ async function initializeFirebaseAdmin() {
       // Dynamic imports prevent Node.js from loading firebase-admin at startup in read-only/serverless environments where it is not needed.
       const { initializeApp, getApps, cert } = await import('firebase-admin/app');
       const { getAuth } = await import('firebase-admin/auth');
+      const { getFirestore } = await import('firebase-admin/firestore');
 
       if (!getApps().length) {
         const firebaseApp = initializeApp({
@@ -21,7 +23,8 @@ async function initializeFirebaseAdmin() {
           }),
         });
         adminAuth = getAuth(firebaseApp);
-        console.log('Firebase Admin SDK initialized successfully.');
+        adminDb = getFirestore(firebaseApp);
+        console.log('Firebase Admin SDK (Auth & Firestore) initialized successfully.');
       }
     } catch (error) {
       console.error('Failed to initialize Firebase Admin SDK dynamically:', error);

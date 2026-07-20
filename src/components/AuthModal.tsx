@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Mail, Lock, User, LogOut, CheckCircle, ShieldAlert, Key, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Mail, Lock, User, LogOut, CheckCircle, ShieldAlert, Key, Loader2, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 
@@ -13,6 +13,8 @@ interface AuthModalProps {
   setCart: (cart: any[]) => void;
   onOpenAdmin: () => void;
 }
+
+
 
 export default function AuthModal({
   isOpen,
@@ -28,6 +30,7 @@ export default function AuthModal({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -39,6 +42,15 @@ export default function AuthModal({
   const [sandboxProvider, setSandboxProvider] = useState<'google' | 'microsoft' | null>(null);
   const [sandboxEmail, setSandboxEmail] = useState('');
   const [sandboxName, setSandboxName] = useState('');
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Play video when modal opens
+  useEffect(() => {
+    if (isOpen && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isOpen]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -353,208 +365,299 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-[#18181b] border border-neutral-800 rounded-3xl p-6 relative shadow-2xl text-white overflow-hidden">
-        
-        {/* Close Button */}
-        <button 
+  // ─────────────────────────────────────────────
+  // LEFT PANEL: Clean Video Showcase
+  // ─────────────────────────────────────────────
+  const LeftShowcasePanel = () => (
+    <div className="hidden md:flex flex-col w-[45%] bg-[#111118] rounded-[1.75rem] m-2.5 relative overflow-hidden select-none">
+      {/* Video background — fills the entire left panel */}
+      <video
+        ref={videoRef}
+        src="/showcase.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Subtle dark gradient overlay at top & bottom for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/60 pointer-events-none" />
+
+      {/* Brand & Back to site — pinned top */}
+      <div className="relative z-10 flex items-center justify-between p-6">
+        <span className="text-white font-extrabold text-lg tracking-tight">
+          YOGANTAK
+        </span>
+        <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[11px] text-white/70 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-full transition-all cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          Back to website <ArrowRight className="w-3 h-3" />
         </button>
+      </div>
 
-        {user ? (
-          /* PROFILE MODE */
-          <div className="space-y-6 py-4">
-            <div className="text-center space-y-1.5">
-              <div className="w-16 h-16 bg-[#adc6ff]/10 text-[#adc6ff] border border-[#adc6ff]/20 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
-                {user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Tagline — pinned bottom */}
+      <div className="relative z-10 p-6 pt-0">
+        <h3 className="text-white text-2xl font-extrabold tracking-tight leading-tight">
+          Protecting Moments,<br />Defining Style.
+        </h3>
+        <p className="text-white/50 text-sm font-medium mt-2">Premium phone cases crafted for you.</p>
+      </div>
+    </div>
+  );
+
+  // ─────────────────────────────────────────────
+  // PROFILE VIEW (when user is logged in)
+  // ─────────────────────────────────────────────
+  if (user) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+        <div className="w-full max-w-3xl bg-[#1e1e2e]/70 backdrop-blur-3xl border border-white/20 rounded-[2rem] flex overflow-hidden shadow-2xl relative font-sans">
+          <LeftShowcasePanel />
+          
+          {/* Right: Profile content */}
+          <div className="flex-1 p-8 flex flex-col justify-center relative">
+            <button 
+              onClick={onClose}
+              className="absolute top-5 right-5 text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-full md:block"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-full flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-violet-500/20">
+                  {user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
+                </div>
+                <h3 className="text-xl font-extrabold text-white">{user.fullName || 'User Profile'}</h3>
+                <p className="text-xs text-white/40 font-mono">{user.email}</p>
+                {user.role === 'admin' && (
+                  <span className="inline-block mt-2 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] uppercase font-mono tracking-widest font-bold rounded-full">
+                    Administrator
+                  </span>
+                )}
               </div>
-              <h3 className="text-lg font-bold">{user.fullName || 'User Profile'}</h3>
-              <p className="text-xs text-neutral-450 font-mono">{user.email}</p>
-              {user.role === 'admin' && (
-                <span className="inline-block mt-2 px-2.5 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] uppercase font-mono tracking-widest font-bold rounded-full">
-                  Administrator
-                </span>
-              )}
-            </div>
 
-            <div className="space-y-3 pt-2">
-              {user.role === 'admin' && (
+              <div className="space-y-3 pt-2">
+                {user.role === 'admin' && (
+                  <button
+                    onClick={() => {
+                      onOpenAdmin();
+                      onClose();
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                  >
+                    Open Admin Dashboard
+                  </button>
+                )}
+
                 <button
-                  onClick={() => {
-                    onOpenAdmin();
-                    onClose();
-                  }}
-                  className="w-full py-3 bg-[#adc6ff] hover:bg-[#adc6ff]/90 text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={handleLogout}
+                  className="w-full py-3 bg-white/5 hover:bg-red-500/10 text-white/60 hover:text-red-400 border border-white/10 hover:border-red-500/20 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                 >
-                  Open Admin Dashboard
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
                 </button>
-              )}
-
-              <button
-                onClick={handleLogout}
-                className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </button>
+              </div>
             </div>
           </div>
-        ) : sandboxProvider ? (
-          /* SANDBOX CHOOSE ACCOUNT MODE */
-          <div className="space-y-5">
-            <div className="flex items-center gap-3 pb-3 border-b border-neutral-800">
-              {sandboxProvider === 'google' ? (
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
-                    <path fill="#34A853" d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z" />
-                    <path fill="#4285F4" d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z" />
-                    <path fill="#FBBC05" d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z" />
-                  </svg>
-                  <span className="font-bold text-sm text-[#adc6ff] tracking-wide uppercase font-sans">Google Sandbox OAuth</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <svg className="w-4.5 h-4.5" viewBox="0 0 23 23">
-                    <path fill="#f35325" d="M0 0h11v11H0z" />
-                    <path fill="#81bc06" d="M12 0h11v11H12z" />
-                    <path fill="#05a6f0" d="M0 12h11v11H0z" />
-                    <path fill="#ffba08" d="M12 12h11v11H12z" />
-                  </svg>
-                  <span className="font-bold text-sm text-[#adc6ff] tracking-wide uppercase font-sans">Microsoft Sandbox OAuth</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // SANDBOX VIEW
+  // ─────────────────────────────────────────────
+  if (sandboxProvider) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+        <div className="w-full max-w-3xl bg-[#1e1e2e]/70 backdrop-blur-3xl border border-white/20 rounded-[2rem] flex overflow-hidden shadow-2xl relative font-sans">
+          <LeftShowcasePanel />
+          
+          {/* Right: Sandbox Form */}
+          <div className="flex-1 p-8 flex flex-col justify-center relative overflow-y-auto max-h-[90vh]">
+            <button 
+              onClick={onClose}
+              className="absolute top-5 right-5 text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+                {sandboxProvider === 'google' ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
+                      <path fill="#34A853" d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z" />
+                      <path fill="#4285F4" d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z" />
+                      <path fill="#FBBC05" d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z" />
+                    </svg>
+                    <span className="font-extrabold text-sm text-white tracking-wide">Google Sandbox</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4.5 h-4.5" viewBox="0 0 23 23">
+                      <path fill="#f35325" d="M0 0h11v11H0z" />
+                      <path fill="#81bc06" d="M12 0h11v11H12z" />
+                      <path fill="#05a6f0" d="M0 12h11v11H0z" />
+                      <path fill="#ffba08" d="M12 12h11v11H12z" />
+                    </svg>
+                    <span className="font-extrabold text-sm text-white tracking-wide">Microsoft Sandbox</span>
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0" />
+                  <span className="font-semibold">{error}</span>
                 </div>
               )}
-            </div>
 
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {success && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>{success}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSandboxSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-neutral-450 font-bold uppercase tracking-wider">Quick Profile Select</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSandboxEmail('admin@yogantak.com');
-                      setSandboxName('Administrator Profile');
-                    }}
-                    className="py-2 px-3 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl text-xs font-semibold text-left transition-all"
-                  >
-                    <div className="font-bold text-white text-[11px]">Admin User</div>
-                    <div className="text-neutral-400 text-[10px] font-mono truncate">admin@yogantak.com</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSandboxEmail('demo.customer@gmail.com');
-                      setSandboxName('Demo Customer');
-                    }}
-                    className="py-2 px-3 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl text-xs font-semibold text-left transition-all"
-                  >
-                    <div className="font-bold text-white text-[11px]">Demo Customer</div>
-                    <div className="text-neutral-400 text-[10px] font-mono truncate">demo.customer@gmail.com</div>
-                  </button>
+              {success && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span className="font-semibold">{success}</span>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-center my-1.5">
-                <div className="flex-grow h-px bg-neutral-800" />
-                <span className="px-3 text-[10px] text-neutral-500 uppercase tracking-widest font-mono">Or enter custom details</span>
-                <div className="flex-grow h-px bg-neutral-800" />
-              </div>
+              <form onSubmit={handleSandboxSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Quick Profile Select</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSandboxEmail('admin@yogantak.com');
+                        setSandboxName('Administrator Profile');
+                      }}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold text-left transition-all border cursor-pointer ${
+                        sandboxEmail === 'admin@yogantak.com'
+                          ? 'bg-violet-500/10 border-violet-500/30 text-violet-300'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="font-bold text-[11px]">Admin User</div>
+                      <div className="text-[10px] font-mono truncate mt-0.5 opacity-60">admin@yogantak.com</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSandboxEmail('demo.customer@gmail.com');
+                        setSandboxName('Demo Customer');
+                      }}
+                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold text-left transition-all border cursor-pointer ${
+                        sandboxEmail === 'demo.customer@gmail.com'
+                          ? 'bg-violet-500/10 border-violet-500/30 text-violet-300'
+                          : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="font-bold text-[11px]">Demo Customer</div>
+                      <div className="text-[10px] font-mono truncate mt-0.5 opacity-60">demo.customer@gmail.com</div>
+                    </button>
+                  </div>
+                </div>
 
-              <div className="space-y-3">
-                <div className="relative">
+                <div className="flex items-center my-1.5">
+                  <div className="flex-grow h-px bg-white/10" />
+                  <span className="px-3 text-[10px] text-white/25 uppercase tracking-widest font-mono font-bold">Or enter custom</span>
+                  <div className="flex-grow h-px bg-white/10" />
+                </div>
+
+                <div className="space-y-3">
                   <input
                     type="email"
-                    placeholder="Enter your customer email"
+                    placeholder="Enter your email"
                     value={sandboxEmail}
                     onChange={(e) => setSandboxEmail(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/20"
                     required
                   />
-                  <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
-
-                <div className="relative">
                   <input
                     type="text"
                     placeholder="Full Name"
                     value={sandboxName}
                     onChange={(e) => setSandboxName(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/20"
                     required
                   />
-                  <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 </div>
-              </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setSandboxProvider(null)}
-                  className="flex-1 py-2.5 border border-neutral-800 text-neutral-450 hover:text-white transition-all text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-[#adc6ff] text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#adc6ff]/90 transition-all cursor-pointer"
-                >
-                  Sign In
-                </button>
-              </div>
-            </form>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSandboxProvider(null)}
+                    className="flex-1 py-3 border border-white/10 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-600/20"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        ) : (
-          /* LOGIN / SIGNUP MODE */
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // MAIN LOGIN / SIGNUP VIEW
+  // ─────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-3xl bg-[#1e1e2e] border border-white/10 rounded-[2rem] flex overflow-hidden shadow-2xl relative font-sans max-h-[90vh]">
+        
+        {/* Left: Carousel Showcase */}
+        <LeftShowcasePanel />
+
+        {/* Right: Form Content */}
+        <div className="flex-1 p-8 flex flex-col justify-center relative overflow-y-auto">
+          {/* Close button */}
+          <button 
+            onClick={onClose}
+            className="absolute top-5 right-5 text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-full"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
           <div className="space-y-5">
-            <div className="flex border-b border-neutral-800 pb-1">
-              <button 
-                onClick={() => { setIsLoginTab(true); setError(null); }}
-                className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                  isLoginTab ? 'border-[#adc6ff] text-white' : 'border-transparent text-neutral-500 hover:text-neutral-300'
-                }`}
-              >
-                Log In
-              </button>
-              <button 
-                onClick={() => { setIsLoginTab(false); setError(null); }}
-                className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                  !isLoginTab ? 'border-[#adc6ff] text-white' : 'border-transparent text-neutral-500 hover:text-neutral-300'
-                }`}
-              >
-                Sign Up
-              </button>
+            {/* Heading */}
+            <div>
+              <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                {isLoginTab ? 'Welcome back' : 'Create an account'}
+              </h2>
+              <p className="text-sm text-white/40 mt-1 font-medium">
+                {isLoginTab ? (
+                  <>Don't have an account? <button onClick={() => { setIsLoginTab(false); setError(null); }} className="text-violet-400 hover:text-violet-300 font-bold transition-colors cursor-pointer">Sign up</button></>
+                ) : (
+                  <>Already have an account? <button onClick={() => { setIsLoginTab(true); setError(null); }} className="text-violet-400 hover:text-violet-300 font-bold transition-colors cursor-pointer">Log in</button></>
+                )}
+              </p>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-xs flex items-center gap-2">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+                <span className="font-semibold">{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>{success}</span>
+                <span className="font-semibold">{success}</span>
               </div>
             )}
 
@@ -562,28 +665,25 @@ export default function AuthModal({
               /* OTP VERIFICATION VIEW */
               <div className="space-y-4 py-2">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold">Verify OTP Code</h4>
-                  <p className="text-xs text-neutral-400">Enter the verification code sent to your credentials.</p>
+                  <h4 className="text-sm font-extrabold text-white">Verify OTP Code</h4>
+                  <p className="text-xs text-white/40 font-medium">Enter the verification code sent to your credentials.</p>
                 </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Enter Code (Use: 4821)"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff] font-mono tracking-widest text-center"
-                  />
-                  <Key className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
+                <input
+                  type="text"
+                  placeholder="Enter Code (Use: 4821)"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-mono tracking-widest text-center placeholder:text-white/20"
+                />
                 <button
                   onClick={handleVerifyOTP}
-                  className="w-full py-3 bg-[#adc6ff] text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#adc6ff]/90 transition-all cursor-pointer"
+                  className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-600/20 active:scale-[0.98]"
                 >
                   Verify Code
                 </button>
                 <button
                   onClick={() => setOtpSent(false)}
-                  className="w-full py-2.5 border border-neutral-800 rounded-xl text-neutral-450 hover:text-white text-xs font-semibold cursor-pointer"
+                  className="w-full py-2.5 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-white/10 text-xs font-bold cursor-pointer transition-all"
                 >
                   Back to Login
                 </button>
@@ -591,41 +691,52 @@ export default function AuthModal({
             ) : isLoginTab ? (
               /* LOGIN TAB */
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="relative">
+                <div>
+                  <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Email</label>
                   <input
                     type="email"
-                    placeholder="Email Address"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/30 transition-colors"
                     required
                   />
-                  <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
-                    required
-                  />
-                  <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div>
+                  <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl py-3 px-4 pr-11 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/30 transition-colors"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#adc6ff] text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#adc6ff]/90 transition-all cursor-pointer"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Sign In
                 </button>
 
-                <div className="flex items-center my-4">
-                  <div className="flex-grow h-px bg-neutral-800" />
-                  <span className="px-3 text-xs text-neutral-500 uppercase tracking-widest font-mono">Or</span>
-                  <div className="flex-grow h-px bg-neutral-800" />
+                <div className="flex items-center my-2">
+                  <div className="flex-grow h-px bg-white/10" />
+                  <span className="px-4 text-[11px] text-white/25 font-medium">Or register with</span>
+                  <div className="flex-grow h-px bg-white/10" />
                 </div>
 
                 {/* Google and Microsoft login buttons */}
@@ -634,10 +745,10 @@ export default function AuthModal({
                     type="button"
                     onClick={handleGoogleSignIn}
                     disabled={loading}
-                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans disabled:opacity-50"
+                    className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all text-sm font-bold flex items-center justify-center gap-2.5 cursor-pointer text-white/70 hover:text-white disabled:opacity-50"
                   >
                     {loading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white/40" />
                     ) : (
                       <svg className="w-4 h-4" viewBox="0 0 24 24">
                         <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
@@ -652,7 +763,7 @@ export default function AuthModal({
                   <button
                     type="button"
                     onClick={handleMicrosoftSignIn}
-                    className="py-2.5 bg-[#202024]/40 hover:bg-[#202024]/80 border border-neutral-800/80 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer text-white font-sans"
+                    className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all text-sm font-bold flex items-center justify-center gap-2.5 cursor-pointer text-white/70 hover:text-white"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 23 23">
                       <path fill="#f35325" d="M0 0h11v11H0z" />
@@ -665,69 +776,118 @@ export default function AuthModal({
                 </div>
 
                 {/* OTP fallback link */}
-                <div className="text-center pt-2">
+                <div className="text-center pt-1">
                   <button
                     type="button"
                     onClick={handleSendOTP}
-                    className="text-xs text-neutral-450 hover:text-[#adc6ff] font-medium transition-colors cursor-pointer"
+                    className="text-xs text-white/30 hover:text-violet-400 font-bold transition-colors cursor-pointer"
                   >
                     Or sign in with OTP Code
                   </button>
                 </div>
 
-                {/* Google mounting container (optional if standard button rendered) */}
+                {/* Google mounting container */}
                 <div id="google-signin-btn-container" className="hidden" />
               </form>
             ) : (
               /* SIGNUP TAB */
               <form onSubmit={handleRegister} className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
-                    required
-                  />
-                  <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/30 transition-colors"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="relative">
+                <div>
+                  <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Email</label>
                   <input
                     type="email"
-                    placeholder="Email Address"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
+                    className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/30 transition-colors"
                     required
                   />
-                  <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#202024]/60 border border-neutral-800/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#adc6ff]"
-                    required
-                  />
-                  <Lock className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div>
+                  <label className="block text-xs font-bold text-white/40 mb-1.5 uppercase tracking-wider">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl py-3 px-4 pr-11 text-sm text-white focus:outline-none focus:border-violet-500/50 font-semibold placeholder:text-white/30 transition-colors"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#adc6ff] text-[#002e69] font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-[#adc6ff]/90 transition-all cursor-pointer"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-violet-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  Create Account
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Create account
                 </button>
+
+                <div className="flex items-center my-2">
+                  <div className="flex-grow h-px bg-white/10" />
+                  <span className="px-4 text-[11px] text-white/25 font-medium">Or register with</span>
+                  <div className="flex-grow h-px bg-white/10" />
+                </div>
+
+                {/* Google and Microsoft */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                    className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all text-sm font-bold flex items-center justify-center gap-2.5 cursor-pointer text-white/70 hover:text-white disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z" />
+                      <path fill="#34A853" d="M16.04 15.345c-1.127.756-2.536 1.173-4.04 1.173a7.077 7.077 0 0 1-6.734-4.856L1.24 14.777C3.198 18.727 7.27 21.425 12 21.425c2.973 0 5.673-.982 7.564-2.673l-3.524-3.407z" />
+                      <path fill="#4285F4" d="M23.49 12.275c0-.818-.08-1.581-.227-2.318H12v4.51h6.464c-.29 1.536-1.145 2.827-2.424 3.673l3.524 3.407c2.064-1.91 3.25-4.718 3.25-8.272z" />
+                      <path fill="#FBBC05" d="M5.266 11.662a7.03 7.03 0 0 1 0-1.897L1.24 6.65a12.012 12.012 0 0 0 0 8.127l4.026-3.115z" />
+                    </svg>
+                    <span>Google</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMicrosoftSignIn}
+                    className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all text-sm font-bold flex items-center justify-center gap-2.5 cursor-pointer text-white/70 hover:text-white"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 23 23">
+                      <path fill="#f35325" d="M0 0h11v11H0z" />
+                      <path fill="#81bc06" d="M12 0h11v11H12z" />
+                      <path fill="#05a6f0" d="M0 12h11v11H0z" />
+                      <path fill="#ffba08" d="M12 12h11v11H12z" />
+                    </svg>
+                    <span>Microsoft</span>
+                  </button>
+                </div>
               </form>
             )}
           </div>
-        )}
-
+        </div>
       </div>
     </div>
   );

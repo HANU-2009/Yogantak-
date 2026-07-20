@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\sonpu\\OneDrive\\Documents\\yogantak-phone-cases\\logs\\.0645fc0d022b3001edd9be10cfab9cc4e4c750cf-audit.json",
+    "files": [
+        {
+            "date": 1784399641572,
+            "name": "C:\\Users\\sonpu\\OneDrive\\Documents\\yogantak-phone-cases\\logs\\exceptions-2026-07-19.log",
+            "hash": "2e77fd6c3f3afd23a5a52b1bf56c9f1f2ce0f1c80baaef92904a4515e801dc7d"
+        }
+    ],
+    "hashType": "sha256"
+}

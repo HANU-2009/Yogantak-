@@ -1,0 +1,55 @@
+import { Router } from 'express';
+
+import authRoutes from '../../modules/auth/auth.routes';
+import userRoutes from '../../modules/users/users.routes';
+import categoryRoutes from '../../modules/categories/categories.routes';
+import brandRoutes from '../../modules/brands/brands.routes';
+import supplierRoutes from '../../modules/suppliers/suppliers.routes';
+import productRoutes from '../../modules/products/products.routes';
+import warehouseRoutes from '../../modules/warehouses/warehouses.routes';
+import inventoryRoutes from '../../modules/inventory/inventory.routes';
+import purchaseRoutes from '../../modules/purchases/purchases.routes';
+import salesRoutes from '../../modules/sales/sales.routes';
+import transferRoutes from '../../modules/transfers/transfers.routes';
+import returnRoutes from '../../modules/returns/returns.routes';
+import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
+import cmsRoutes from '../../modules/cms/cms.routes';
+import marketingRoutes from '../../modules/marketing/marketing.routes';
+import couponRoutes from '../../modules/coupons/coupons.routes';
+import loyaltyRoutes from '../../modules/loyalty/loyalty.routes';
+import referralRoutes from '../../modules/referrals/referrals.routes';
+import notificationRoutes from '../../modules/notifications/notifications.routes';
+import financeRoutes from '../../modules/finance/finance.routes';
+import analyticsRoutes from '../../modules/analytics/analytics.routes';
+import businessRoutes from '../../modules/business/business.routes';
+import monitoringRoutes from '../../modules/monitoring/monitoring.routes';
+import webhooksRoutes from '../../modules/webhooks/webhooks.routes';
+
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/brands', brandRoutes);
+router.use('/suppliers', supplierRoutes);
+router.use('/products', productRoutes);
+router.use('/warehouses', warehouseRoutes);
+router.use('/inventory', inventoryRoutes);
+router.use('/purchases', purchaseRoutes);
+router.use('/sales', salesRoutes);
+router.use('/transfers', transferRoutes);
+router.use('/returns', returnRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/cms', cmsRoutes);
+router.use('/marketing', marketingRoutes);
+router.use('/coupons', couponRoutes);
+router.use('/loyalty', loyaltyRoutes);
+router.use('/referrals', referralRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/finance', financeRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/business', businessRoutes);
+router.use('/monitoring', monitoringRoutes);
+router.use('/webhooks', webhooksRoutes);
+
+export default router;
