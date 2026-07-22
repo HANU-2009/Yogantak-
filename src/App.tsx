@@ -556,6 +556,7 @@ export default function App() {
         savedCount={savedProductIds.length}
         user={user}
         onAccountClick={() => setIsAuthModalOpen(true)}
+        onOpenAdmin={() => setIsAdminView(true)}
       />
 
       {/* Bento Box Hero Display - Only active under core Catalog overview */}

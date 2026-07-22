@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, BookOpen, Clock, Heart, Sparkles, User, Search } from 'lucide-react';
+import { ShoppingBag, BookOpen, Clock, Heart, Sparkles, User, Search, Shield } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface NavbarProps {
@@ -10,6 +10,7 @@ interface NavbarProps {
   savedCount: number;
   user: any;
   onAccountClick: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export default function Navbar({
@@ -19,7 +20,8 @@ export default function Navbar({
   setIsCartOpen,
   savedCount,
   user,
-  onAccountClick
+  onAccountClick,
+  onOpenAdmin
 }: NavbarProps) {
   const [scrollY, setScrollY] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -113,6 +115,18 @@ export default function Navbar({
                 {user ? user.fullName.split(' ')[0] : 'Sign In'}
               </span>
             </button>
+
+            {/* Admin Dashboard Shortcut */}
+            {user?.role === 'admin' && onOpenAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-600/20 cursor-pointer active:scale-95"
+                title="Open Admin Dashboard"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Admin</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
