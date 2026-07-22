@@ -26,7 +26,7 @@ export function errorMiddleware(
   else if (err instanceof ZodError) {
     statusCode = 422;
     message = 'Validation failed';
-    errors = err.errors.map((e) => ({
+    errors = (err.issues || (err as any).errors).map((e: any) => ({
       field: e.path.join('.'),
       message: e.message,
       code: e.code,
