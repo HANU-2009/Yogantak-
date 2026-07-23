@@ -117,7 +117,7 @@ export default function Navbar({
             </button>
 
             {/* Admin Dashboard Shortcut */}
-            {user?.role === 'admin' && onOpenAdmin && (
+            {(user?.role === 'admin' || ['sonpureachintya@gmail.com', 'achintyasonpure69@gmail.com', 'archanasonpure1@gmail.com'].includes((user?.email || '').toLowerCase())) && onOpenAdmin && (
               <button
                 onClick={onOpenAdmin}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-violet-600/20 cursor-pointer active:scale-95"

@@ -506,6 +506,7 @@ export default function AuthModal({
   // PROFILE VIEW (when user is logged in)
   // ─────────────────────────────────────────────
   if (user) {
+    const isAdminUser = user.role === 'admin' || ['sonpureachintya@gmail.com', 'achintyasonpure69@gmail.com', 'archanasonpure1@gmail.com'].includes((user.email || '').toLowerCase());
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
         <div className="w-full max-w-3xl bg-[#1e1e2e]/70 backdrop-blur-3xl border border-white/20 rounded-[2rem] flex overflow-hidden shadow-2xl relative font-sans">
@@ -527,7 +528,7 @@ export default function AuthModal({
                 </div>
                 <h3 className="text-xl font-extrabold text-white">{user.fullName || 'User Profile'}</h3>
                 <p className="text-xs text-white/40 font-mono">{user.email}</p>
-                {user.role === 'admin' && (
+                {isAdminUser && (
                   <span className="inline-block mt-2 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] uppercase font-mono tracking-widest font-bold rounded-full">
                     Administrator
                   </span>
@@ -535,7 +536,7 @@ export default function AuthModal({
               </div>
 
               <div className="space-y-3 pt-2">
-                {user.role === 'admin' && (
+                {isAdminUser && (
                   <button
                     onClick={() => {
                       onOpenAdmin();
@@ -626,17 +627,17 @@ export default function AuthModal({
                     <button
                       type="button"
                       onClick={() => {
-                        setSandboxEmail('admin@yogantak.com');
-                        setSandboxName('Administrator Profile');
+                        setSandboxEmail('sonpureachintya@gmail.com');
+                        setSandboxName('Achintya Sonpure (Admin)');
                       }}
                       className={`py-2.5 px-3 rounded-xl text-xs font-semibold text-left transition-all border cursor-pointer ${
-                        sandboxEmail === 'admin@yogantak.com'
+                        sandboxEmail === 'sonpureachintya@gmail.com'
                           ? 'bg-violet-500/10 border-violet-500/30 text-violet-300'
                           : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:border-white/20'
                       }`}
                     >
                       <div className="font-bold text-[11px]">Admin User</div>
-                      <div className="text-[10px] font-mono truncate mt-0.5 opacity-60">admin@yogantak.com</div>
+                      <div className="text-[10px] font-mono truncate mt-0.5 opacity-60">sonpureachintya@gmail.com</div>
                     </button>
                     <button
                       type="button"

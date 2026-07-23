@@ -319,11 +319,20 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
         setStats(d.stats);
         setSalesHistory(d.salesHistory || []);
       }
-      if (prodRes.ok) setProducts(await prodRes.json());
+      if (prodRes.ok) {
+        setProducts(await prodRes.json());
+      } else {
+        const fallbackRes = await fetch('/api/products');
+        if (fallbackRes.ok) setProducts(await fallbackRes.json());
+      }
       if (ordersRes.ok) setOrders(await ordersRes.json());
       if (couponRes.ok) setCoupons(await couponRes.json());
     } catch (e) {
       console.error(e);
+      try {
+        const fallbackRes = await fetch('/api/products');
+        if (fallbackRes.ok) setProducts(await fallbackRes.json());
+      } catch {}
     } finally {
       setLoading(false);
     }

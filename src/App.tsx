@@ -60,41 +60,81 @@ export default function App() {
   
   // Products, Auth, and Admin states
   const [products, setProducts] = useState<Product[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('yogantak_token'));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('yogantak_token'));
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem('yogantak_user');
+    if (!saved) return null;
+    try {
+      const u = JSON.parse(saved);
+      if (u && ['sonpureachintya@gmail.com', 'achintyasonpure69@gmail.com', 'archanasonpure1@gmail.com'].includes((u.email || '').toLowerCase())) {
+        u.role = 'admin';
+      }
+      return u;
+    } catch {
+      return null;
+    }
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
 
-  // Listen to Firebase Auth state change and sync to server
   useEffect(() => {
+    if (user) {
+      localStorage.setItem('yogantak_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('yogantak_user');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('yogantak_token', token);
+    } else {
+      localStorage.removeItem('yogantak_token');
+    }
+  }, [token]);
+
+  // Listen to Auth state change and sync to server
+  useEffect(() => {
+    const savedToken = localStorage.getItem('yogantak_token');
+    if (savedToken) {
+      fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${savedToken}` }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Session invalid');
+          return res.json();
+        })
+        .then(data => {
+          const userData = data.user;
+          if (userData && ['sonpureachintya@gmail.com', 'achintyasonpure69@gmail.com', 'archanasonpure1@gmail.com'].includes((userData.email || '').toLowerCase())) {
+            userData.role = 'admin';
+          }
+          setUser(userData);
+        })
+        .catch(() => {
+          // Keep existing local user state
+        });
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
           const idToken = await firebaseUser.getIdToken();
           setToken(idToken);
-          localStorage.setItem('yogantak_token', idToken);
-          
           const res = await fetch('/api/auth/me', {
             headers: { 'Authorization': `Bearer ${idToken}` }
           });
           if (res.ok) {
             const data = await res.json();
-            setUser(data.user);
-          } else {
-            setToken(null);
-            setUser(null);
-            localStorage.removeItem('yogantak_token');
+            const userData = data.user;
+            if (userData && ['sonpureachintya@gmail.com', 'achintyasonpure69@gmail.com', 'archanasonpure1@gmail.com'].includes((userData.email || '').toLowerCase())) {
+              userData.role = 'admin';
+            }
+            setUser(userData);
           }
         } catch (err) {
           console.error('Error syncing auth state:', err);
-          setToken(null);
-          setUser(null);
-          localStorage.removeItem('yogantak_token');
         }
-      } else {
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem('yogantak_token');
       }
     });
 
