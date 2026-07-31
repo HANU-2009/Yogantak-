@@ -481,7 +481,6 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 // GET /api/products — Public product catalog
 app.get('/api/products', async (req, res) => {
   try {
-    await seedNeonDatabaseIfEmpty(db);
     const resDb = await db.query('SELECT * FROM products ORDER BY created_at DESC');
     const products = resDb.rows as any[];
     res.json(products.map(formatProduct));

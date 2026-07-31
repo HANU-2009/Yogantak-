@@ -321,10 +321,14 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
         setSalesHistory(d.salesHistory || []);
       }
       if (prodRes.ok) {
-        setProducts(await prodRes.json());
+        const pData = await prodRes.json();
+        if (Array.isArray(pData)) setProducts(pData);
       } else {
         const fallbackRes = await fetch('/api/products');
-        if (fallbackRes.ok) setProducts(await fallbackRes.json());
+        if (fallbackRes.ok) {
+          const pData = await fallbackRes.json();
+          if (Array.isArray(pData)) setProducts(pData);
+        }
       }
       if (ordersRes.ok) setOrders(await ordersRes.json());
       if (couponRes.ok) setCoupons(await couponRes.json());
@@ -332,7 +336,10 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
       console.error(e);
       try {
         const fallbackRes = await fetch('/api/products');
-        if (fallbackRes.ok) setProducts(await fallbackRes.json());
+        if (fallbackRes.ok) {
+          const pData = await fallbackRes.json();
+          if (Array.isArray(pData)) setProducts(pData);
+        }
       } catch {}
     } finally {
       setLoading(false);
@@ -597,18 +604,16 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                   onClick={async () => {
                     setLoading(true);
                     try {
-                      const res = await fetch(`${API}/api/admin/products/seed`, {
-                        method: 'POST',
-                        headers: authHeader,
-                        body: JSON.stringify({ force: true })
+                      const res = await fetch(`${API}/api/admin/products`, {
+                        headers: authHeader
                       });
                       const data = await res.json();
-                      if (data.success && data.products) {
-                        setProducts(data.products);
+                      if (Array.isArray(data)) {
+                        setProducts(data);
                         onCatalogSync?.();
-                        showToast('🔄 Catalog & Inventory synced from Neon DB!');
+                        showToast('🔄 Catalog & Inventory synced from Database!');
                       } else {
-                        throw new Error(data.error || 'Failed to sync');
+                        throw new Error(data.error || 'Failed to sync catalog');
                       }
                     } catch (e: any) {
                       showToast(`❌ ${e.message || 'Sync failed'}`);

@@ -59,11 +59,15 @@ export async function initSchema() {
       );
     `);
 
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+
     await db.query('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);');
     await db.query('CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at);');
-
-    // Auto-seed default catalog if Neon database is empty
-    await seedNeonDatabaseIfEmpty(db);
 
     console.log('[POSTGRES] Schema initialized and synced successfully.');
   } catch (error) {

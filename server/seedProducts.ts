@@ -136,13 +136,10 @@ export const DEFAULT_PRODUCTS_SEED = [
 ];
 
 export async function seedNeonDatabaseIfEmpty(db: any, force = false): Promise<boolean> {
-  try {
-    const countRes = await db.query('SELECT COUNT(*) as count FROM products');
-    const count = Number(countRes.rows[0]?.count || 0);
-    if (count > 0 && !force) {
-      console.log('[POSTGRES] Neon database already contains', count, 'products. Skipping auto-seed.');
-      return false;
-    }
+  // Automatic seeding disabled — catalog inventory is strictly managed manually by Admin in Neon DB
+  if (!force) {
+    return false;
+  }
 
     console.log('[POSTGRES] Seeding Neon database with default luxury catalog...');
     for (const p of DEFAULT_PRODUCTS_SEED) {
@@ -158,21 +155,7 @@ export async function seedNeonDatabaseIfEmpty(db: any, force = false): Promise<b
           rating, reviews_count, models, materials, colors, tags, features,
           magsafe, bestseller, eco_friendly
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-        ON CONFLICT (id) DO UPDATE SET
-          name = EXCLUDED.name,
-          description = EXCLUDED.description,
-          price = EXCLUDED.price,
-          stock = EXCLUDED.stock,
-          category = EXCLUDED.category,
-          image_url = EXCLUDED.image_url,
-          models = EXCLUDED.models,
-          materials = EXCLUDED.materials,
-          colors = EXCLUDED.colors,
-          tags = EXCLUDED.tags,
-          features = EXCLUDED.features,
-          magsafe = EXCLUDED.magsafe,
-          bestseller = EXCLUDED.bestseller,
-          eco_friendly = EXCLUDED.eco_friendly
+        ON CONFLICT (id) DO NOTHING
       `, [
         p.id, p.name, p.description, p.price, p.stock, p.category, '', p.image_url,
         p.rating, p.reviews_count, modelsJson, materialsJson, colorsJson, tagsJson, featuresJson,

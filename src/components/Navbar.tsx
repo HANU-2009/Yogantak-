@@ -57,7 +57,7 @@ export default function Navbar({
   const isCatalog = activeTab === 'catalog';
 
   // Modern floating pill for catalog, standard sticky for others
-  const positionClass = isCatalog ? 'fixed top-0 md:top-4 left-0 md:left-[2.5%] md:w-[95%]' : 'sticky top-0 w-full';
+  const positionClass = isCatalog ? 'fixed top-0 md:top-4 left-0 md:left-[2.5%] w-full md:w-[95%]' : 'sticky top-0 w-full';
   const roundedClass = isCatalog ? 'md:rounded-full' : '';
 
   const navLinks = [
