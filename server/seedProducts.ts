@@ -141,6 +141,7 @@ export async function seedNeonDatabaseIfEmpty(db: any, force = false): Promise<b
     return false;
   }
 
+  try {
     console.log('[POSTGRES] Seeding Neon database with default luxury catalog...');
     for (const p of DEFAULT_PRODUCTS_SEED) {
       const modelsJson = JSON.stringify(p.models);
