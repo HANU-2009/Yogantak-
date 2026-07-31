@@ -275,10 +275,10 @@ export default function ProductDetailsModal({
           </div>
 
           {/* Main Workspace Frame container */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 max-h-[85vh] overflow-y-auto bg-transparent gap-6 sm:gap-8 p-4 sm:p-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 max-h-[85vh] overflow-y-auto bg-transparent gap-6 sm:gap-8 p-4 sm:p-8 lg:p-10">
             
             {/* LEFT BLOCK: Thumbnail bar, main preview frame and model lifestyle image splits (Col-6.5) */}
-            <div className="lg:col-span-7 flex flex-col gap-6 select-none">
+            <div className="md:col-span-6 lg:col-span-7 flex flex-col gap-6 select-none">
               
               <div className="flex flex-col-reverse md:flex-row gap-4 items-stretch">
                 
@@ -448,7 +448,7 @@ export default function ProductDetailsModal({
             </div>
 
             {/* RIGHT BLOCK: Title, badges, selectors, purchase widgets, accordions (Col-5.5) */}
-            <div className="lg:col-span-5 space-y-6 flex flex-col justify-start">
+            <div className="md:col-span-6 lg:col-span-5 space-y-6 flex flex-col justify-start">
               
               {/* Product title & ratings stack */}
               <div className="space-y-1 mt-1">
@@ -709,6 +709,25 @@ export default function ProductDetailsModal({
 
             </div>
 
+          </div>
+
+          {/* Sticky Mobile Add to Bag Bar (< 640px) */}
+          <div className="sm:hidden sticky bottom-0 left-0 right-0 px-4 py-3 bg-white/95 backdrop-blur-xl border-t border-neutral-200/80 flex items-center justify-between gap-3 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">Total Price</span>
+              <strong className="text-base font-extrabold font-mono text-neutral-900 leading-none">
+                ₹{finalPrice.toLocaleString('en-IN')}
+              </strong>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              className={`flex-1 py-3 px-4 text-center font-mono text-[11px] font-bold uppercase tracking-wider transition-all rounded-xl cursor-pointer flex items-center justify-center gap-2 bg-[#cfff71] text-neutral-900 shadow-sm ${
+                isAdded ? 'opacity-90' : 'active:scale-95'
+              }`}
+            >
+              <Check className={`w-3.5 h-3.5 transition-all ${isAdded ? 'scale-110' : 'hidden'}`} />
+              <span>{isAdded ? 'ADDED TO BAG' : 'ADD TO BAG'}</span>
+            </button>
           </div>
 
         </div>

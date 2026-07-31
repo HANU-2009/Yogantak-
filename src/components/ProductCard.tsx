@@ -262,25 +262,32 @@ export default function ProductCard({
             )}
           </div>
 
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <h3 
               onClick={() => onOpenDetails(product, activeModel, activeColor, activeMaterial)}
               className="font-sans text-[15px] font-bold text-neutral-900 leading-snug cursor-pointer line-clamp-1 hover:text-black transition-colors"
             >
               {product.name}
             </h3>
-            <p className="text-xs text-neutral-500 font-medium capitalize">
-              {activeModel}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-neutral-500 font-medium capitalize">
+                {activeModel}
+              </p>
+              <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500">
+                <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
+                <span className="text-neutral-900">{(product.rating ?? 5).toFixed(1)}</span>
+                <span className="text-neutral-400 font-medium font-sans">({product.reviewsCount ?? 0})</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center justify-between border-t border-neutral-100 pt-3 mt-3">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-[15px] font-extrabold text-neutral-900 font-sans tracking-tight leading-none">
+            <span className="text-[16px] font-extrabold text-neutral-900 font-sans tracking-tight leading-none">
               ₹{prices.current.toLocaleString('en-IN')}
             </span>
-            <span className="text-[8px] text-neutral-400 font-sans">(Incl. GST)</span>
+            <span className="text-[8px] text-neutral-400 font-sans hidden sm:inline">(Incl. GST)</span>
             {prices.retail && (
               <span className="text-[11px] text-neutral-400 line-through font-sans leading-none ml-0.5">
                 ₹{prices.retail.toLocaleString('en-IN')}
@@ -288,11 +295,17 @@ export default function ProductCard({
             )}
           </div>
           
-          <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500">
-            <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
-            <span className="text-neutral-900">{(product.rating ?? 5).toFixed(1)}</span>
-            <span className="text-neutral-400 font-medium font-sans">({product.reviewsCount ?? 0})</span>
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuickAdd(product, activeModel, activeColor, activeMaterial);
+            }}
+            className="px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs rounded-full flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            title="Quick add to bag"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>+ Add</span>
+          </button>
         </div>
       </div>
     </div>

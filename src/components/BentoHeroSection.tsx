@@ -1,6 +1,6 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { ArrowUpRight, Star, Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowUpRight, Star, ShieldCheck, Heart, Sparkles } from 'lucide-react';
 
 interface BentoHeroProps {
   onExploreClick: () => void;
@@ -10,25 +10,25 @@ interface BentoHeroProps {
 export default function BentoHeroSection({ onExploreClick, onStudioClick }: BentoHeroProps) {
   return (
     <div className="w-full bg-[#f4f5f1] min-h-screen pt-28 pb-12 px-4 sm:px-6 lg:px-8 text-neutral-900 font-sans">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 auto-rows-auto">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
         
-        {/* BIG HERO LEFT (col-span-8) */}
+        {/* BIG HERO LEFT (md:col-span-12 lg:col-span-8) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="lg:col-span-8 bg-[#fdfdfd] rounded-[2rem] p-8 lg:p-12 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[450px]"
+          className="md:col-span-12 lg:col-span-8 bg-[#fdfdfd] rounded-[2rem] p-6 sm:p-8 lg:p-12 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[380px] sm:min-h-[450px]"
         >
           <div className="z-10 w-full max-w-lg">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold text-neutral-500 mb-6 border border-neutral-200">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold text-neutral-500 mb-4 sm:mb-6 border border-neutral-200">
               <span className="w-2 h-2 rounded-full bg-neutral-400"></span> Design is Classic
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 text-neutral-900 leading-[1.1]">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-3 sm:mb-4 text-neutral-900 leading-[1.1]">
               Yogantak Inspiring<br />Protection.
             </h1>
             
-            <div className="flex items-center gap-4 mb-10 mt-6">
-              <span className="text-4xl font-light text-neutral-300">01</span>
+            <div className="flex items-center gap-3 sm:gap-4 mb-8 sm:mb-10 mt-4 sm:mt-6">
+              <span className="text-3xl sm:text-4xl font-light text-neutral-300">01</span>
               <div className="w-12 h-[1px] bg-neutral-300"></div>
               <div>
                 <p className="font-semibold text-neutral-900 text-sm">Clear Aesthetics</p>
@@ -38,9 +38,9 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
 
             <button 
               onClick={onExploreClick}
-              className="group flex items-center gap-4 bg-[#cfff71]/80 backdrop-blur-sm text-neutral-900 font-bold px-6 py-3 rounded-full hover:bg-[#cfff71] transition-all cursor-pointer"
+              className="group flex items-center justify-between gap-4 bg-[#cfff71]/80 backdrop-blur-sm text-neutral-900 font-bold px-6 py-3.5 rounded-full hover:bg-[#cfff71] transition-all cursor-pointer active:scale-95 shadow-sm"
             >
-              View All Products
+              <span>View All Products</span>
               <span className="bg-black text-white p-2 rounded-full group-hover:scale-110 transition-transform">
                 <ArrowUpRight className="w-4 h-4" />
               </span>
@@ -58,84 +58,116 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
           </div>
         </motion.div>
 
-        {/* TOP RIGHT COLUMN (col-span-4) */}
-        <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-6">
+        {/* TOP RIGHT COLUMN (md:col-span-12 lg:col-span-4) -> Side-by-side on tablet, vertical on desktop */}
+        <div className="md:col-span-12 lg:col-span-4 grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-col gap-4 sm:gap-6">
           
           {/* Popular Colors Box */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm"
+            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm flex flex-col justify-between"
           >
-            <h3 className="text-sm font-semibold mb-4 text-neutral-800">Popular Colors</h3>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#486bd9] ring-4 ring-[#486bd9]/20 cursor-pointer"></div>
-              <div className="w-8 h-8 rounded-full bg-[#f97316] cursor-pointer"></div>
-              <div className="w-8 h-8 rounded-full bg-[#22c55e] cursor-pointer"></div>
-              <div className="w-8 h-8 rounded-full bg-[#ef4444] cursor-pointer"></div>
-              <div className="w-8 h-8 rounded-full bg-[#06b6d4] cursor-pointer"></div>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase">AESTHETIC FINISH</span>
+                <span className="text-xs text-neutral-800 font-medium bg-neutral-100 px-2 py-0.5 rounded-full">+12 Colors</span>
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900 leading-snug mb-4">
+                Designed to Match Your Daily Style
+              </h3>
+            </div>
+            
+            <div className="flex items-center justify-between gap-1 mt-2">
+              <div className="flex -space-x-2 overflow-hidden">
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#eab308]" title="Gold"></div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#3b82f6]" title="Pacific Blue"></div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#ec4899]" title="Rose"></div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#10b981]" title="Sage"></div>
+                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#1e293b]" title="Graphite"></div>
+              </div>
+              <button 
+                onClick={onStudioClick}
+                className="text-xs font-bold text-neutral-600 hover:text-black underline cursor-pointer"
+              >
+                Customize
+              </button>
             </div>
           </motion.div>
 
-          {/* New Gen Box */}
+          {/* Best Design / Materials Box */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative overflow-hidden flex-grow cursor-pointer group min-h-[200px]"
-            onClick={onStudioClick}
+            onClick={onExploreClick}
+            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative overflow-hidden group cursor-pointer flex flex-col justify-between"
           >
-            <div className="absolute top-6 right-6 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-              <ArrowUpRight className="w-4 h-4 text-neutral-800" />
+            <div className="absolute right-4 top-4 w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
+              <ArrowUpRight className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold mb-1 text-neutral-800 relative z-10">New Gen<br />Carbon</h3>
-            <div className="absolute -right-4 -bottom-4 w-44 h-44">
-              <img 
-                src="/products/separate_image_2.png" 
-                alt="Carbon Case" 
-                className="w-full h-full object-cover rounded-tl-3xl opacity-90 group-hover:scale-105 transition-transform duration-500"
-              />
+            <div>
+              <div className="text-2xl font-bold text-neutral-900 mb-1">10ft</div>
+              <p className="text-xs text-neutral-500 font-medium">Military Drop Tested</p>
+            </div>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-neutral-700" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-neutral-900">Armor Protection</h4>
+                <p className="text-xs text-neutral-500">Kevlar & Silicone cores</p>
+              </div>
             </div>
           </motion.div>
 
         </div>
 
-        {/* BOTTOM ROW (4 sections spanning the 12 cols) */}
-
-        {/* More Products (col-span-3) */}
+        {/* BOTTOM ROW BENTO BOXES */}
+        
+        {/* Best Design / Studio Trigger (md:col-span-6 lg:col-span-3) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="lg:col-span-3 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative"
+          onClick={onStudioClick}
+          className="md:col-span-6 lg:col-span-3 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm flex flex-col justify-between group cursor-pointer border border-neutral-100 hover:border-neutral-300 transition-all"
         >
-          <div className="absolute top-6 right-6 w-8 h-8 bg-red-50 text-red-500 rounded-full flex items-center justify-center shadow-sm">
-            <Heart className="w-4 h-4 fill-current" />
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5" /> Studio
+            </span>
+            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
           </div>
-          <h3 className="text-md font-bold text-neutral-800">More Products</h3>
-          <p className="text-xs text-neutral-500 mb-4">460 plus items.</p>
-          <div className="flex gap-2">
-            <div className="w-16 h-16 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+          <div className="mt-6">
+            <h3 className="text-lg font-bold text-neutral-900 leading-snug">
+              Personalize Your Case Monogram
+            </h3>
+            <p className="text-xs text-neutral-500 mt-1">Add custom gold or silver foil letters</p>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <div className="w-14 h-14 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
               <img src="/products/Gemini_Generated_Image_t6puc4t6puc4t6pu.png" className="w-full h-full object-cover" alt="item" />
             </div>
-            <div className="w-16 h-16 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-14 h-14 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
               <img src="/products/separate_image_2.png" className="w-full h-full object-cover" alt="item" />
             </div>
-            <div className="w-16 h-16 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-14 h-14 bg-neutral-100 rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
               <img src="/products/case_set2_2.png" className="w-full h-full object-cover" alt="item" />
             </div>
           </div>
         </motion.div>
 
-        {/* Downloads / Reviews (col-span-2) */}
+        {/* Downloads / Reviews (md:col-span-6 lg:col-span-2) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="lg:col-span-2 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm flex flex-col items-center justify-center text-center"
+          className="md:col-span-6 lg:col-span-2 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm flex flex-col items-center justify-center text-center"
         >
-          <div className="w-24 h-24 bg-[#3d70f5] rounded-full flex flex-col items-center justify-center text-white shadow-lg shadow-[#3d70f5]/30 mb-4 cursor-pointer hover:scale-105 transition-transform">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#3d70f5] rounded-full flex flex-col items-center justify-center text-white shadow-lg shadow-[#3d70f5]/30 mb-4 cursor-pointer hover:scale-105 transition-transform">
             <span className="text-xl font-bold">5m+</span>
             <span className="text-[9px] uppercase tracking-wider opacity-90">Orders</span>
           </div>
@@ -144,18 +176,18 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
           </div>
         </motion.div>
 
-        {/* Collection Released (col-span-4) */}
+        {/* Collection Released (md:col-span-6 lg:col-span-4) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="lg:col-span-4 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative overflow-hidden group cursor-pointer"
+          className="md:col-span-6 lg:col-span-4 bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative overflow-hidden group cursor-pointer"
           onClick={onExploreClick}
         >
           <div className="absolute top-6 right-6 z-10 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
             <ArrowUpRight className="w-4 h-4 text-neutral-800" />
           </div>
-          <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-bold mb-3 relative z-10 border border-red-100">
+          <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-bold mb-3 relative z-10 border border-red-100">
             <Heart className="w-3 h-3 fill-current" /> Popular
           </div>
           <h3 className="text-lg font-bold text-neutral-800 relative z-10 max-w-[150px] leading-tight">
@@ -171,12 +203,12 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
           </div>
         </motion.div>
 
-        {/* Right Tall Feature Card (col-span-3) */}
+        {/* Right Tall Feature Card (md:col-span-6 lg:col-span-3) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          className="lg:col-span-3 bg-[#e8eaec] rounded-[2rem] p-6 shadow-sm relative overflow-hidden min-h-[220px]"
+          className="md:col-span-6 lg:col-span-3 bg-[#e8eaec] rounded-[2rem] p-6 shadow-sm relative overflow-hidden min-h-[220px] flex flex-col justify-end"
         >
           <div className="absolute top-6 right-6 z-10 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
             <ArrowUpRight className="w-4 h-4 text-neutral-800" />
@@ -188,7 +220,7 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="relative z-10 mt-auto flex flex-col justify-end h-full">
+          <div className="relative z-10 mt-auto flex flex-col justify-end">
             <h3 className="text-lg font-bold text-neutral-900 leading-tight mb-1">Light Grey Surface<br />Armor Case</h3>
             <p className="text-xs text-neutral-600 font-medium">Boosted with protection</p>
           </div>

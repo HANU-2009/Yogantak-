@@ -597,6 +597,8 @@ export default function App() {
         user={user}
         onAccountClick={() => setIsAuthModalOpen(true)}
         onOpenAdmin={() => setIsAdminView(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
 
       {/* Bento Box Hero Display - Only active under core Catalog overview */}

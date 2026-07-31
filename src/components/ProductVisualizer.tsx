@@ -71,24 +71,24 @@ export default function ProductVisualizer({
       
       {/* Title block */}
       <div className="text-center max-w-xl mx-auto space-y-3 mb-8 sm:mb-10">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-white rounded-none border border-black text-[10px] font-mono tracking-widest uppercase">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-white rounded-full border border-black text-[10px] font-mono tracking-widest uppercase">
           <Sparkles className="w-3.5 h-3.5" />
           <span>BESPOKE TAILORING STUDIO</span>
         </div>
-        <h2 className="font-sans text-2xl sm:text-4xl font-extrabold tracking-tight text-white uppercase italic">
+        <h2 className="font-sans text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 uppercase italic">
           Customize Your Shell
         </h2>
-        <p className="text-xs sm:text-sm text-gray-400 font-mono uppercase tracking-widest">
+        <p className="text-xs sm:text-sm text-neutral-500 font-mono uppercase tracking-widest">
           Choose materials, accents, and monogramming
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-start">
         
         {/* Left pane: Dynamic full rendering frame */}
-        <div className="lg:col-span-5 flex flex-col items-center justify-center bg-gray-50 p-4 sm:p-8 min-h-[360px] sm:min-h-[460px] border border-gray-100 relative overflow-hidden group">
+        <div className="md:col-span-5 lg:col-span-5 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md p-4 sm:p-8 min-h-[360px] sm:min-h-[460px] rounded-[2rem] border border-neutral-200/80 relative overflow-hidden group shadow-sm">
           
-          <div className="absolute top-4 left-4 font-mono text-[9px] text-gray-400 uppercase tracking-widest">
+          <div className="absolute top-4 left-4 font-mono text-[9px] text-neutral-400 uppercase tracking-widest">
             REAL-TIME LAB VIEW
           </div>
 
@@ -106,7 +106,7 @@ export default function ProductVisualizer({
           </div>
 
           {/* Quick specs badge */}
-          <div className="mt-4 sm:mt-8 space-y-1 text-center bg-white/60 px-3 sm:px-4 py-2 border border-gray-200 text-[10px] sm:text-xs font-mono text-slate-600 max-w-xs break-words">
+          <div className="mt-4 sm:mt-8 space-y-1 text-center bg-neutral-100/80 px-3 sm:px-4 py-2 rounded-xl border border-neutral-200/80 text-[10px] sm:text-xs font-mono text-neutral-700 max-w-xs break-words">
             <div>DEVICE: {selectedModel}</div>
             <div>COMPOSITION: {selectedMaterial}</div>
             {monogramText.trim().length > 0 && (
@@ -116,7 +116,7 @@ export default function ProductVisualizer({
         </div>
 
         {/* Right pane: Full configuration interactive controls */}
-        <div className="lg:col-span-7 space-y-6 sm:space-y-8 bg-white p-4 sm:p-8 border border-gray-100">
+        <div className="md:col-span-7 lg:col-span-7 space-y-6 sm:space-y-8 bg-white/80 backdrop-blur-md p-5 sm:p-8 rounded-[2rem] border border-neutral-200/80 shadow-sm">
           
           {/* Step 1: Select Model */}
           <div className="space-y-3">
