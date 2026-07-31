@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Star, ShieldCheck, Heart, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Star, Heart, Sparkles } from 'lucide-react';
 
 interface BentoHeroProps {
   onExploreClick: () => void;
@@ -12,12 +12,12 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
     <div className="w-full bg-[#f4f5f1] min-h-screen pt-28 pb-12 px-4 sm:px-6 lg:px-8 text-neutral-900 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
         
-        {/* BIG HERO LEFT (md:col-span-12 lg:col-span-8) */}
+        {/* BIG HERO TOP BANNER (col-span-12) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="md:col-span-12 lg:col-span-8 bg-[#fdfdfd] rounded-[2rem] p-6 sm:p-8 lg:p-12 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[380px] sm:min-h-[450px]"
+          className="col-span-12 md:col-span-12 lg:col-span-12 bg-[#fdfdfd] rounded-[2rem] p-6 sm:p-8 lg:p-12 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[380px] sm:min-h-[450px]"
         >
           <div className="z-10 w-full max-w-lg">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold text-neutral-500 mb-4 sm:mb-6 border border-neutral-200">
@@ -57,71 +57,6 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
             />
           </div>
         </motion.div>
-
-        {/* TOP RIGHT COLUMN (md:col-span-12 lg:col-span-4) -> Side-by-side on tablet, vertical on desktop */}
-        <div className="md:col-span-12 lg:col-span-4 grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-col gap-4 sm:gap-6">
-          
-          {/* Popular Colors Box */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase">AESTHETIC FINISH</span>
-                <span className="text-xs text-neutral-800 font-medium bg-neutral-100 px-2 py-0.5 rounded-full">+12 Colors</span>
-              </div>
-              <h3 className="text-lg font-bold text-neutral-900 leading-snug mb-4">
-                Designed to Match Your Daily Style
-              </h3>
-            </div>
-            
-            <div className="flex items-center justify-between gap-1 mt-2">
-              <div className="flex -space-x-2 overflow-hidden">
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#eab308]" title="Gold"></div>
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#3b82f6]" title="Pacific Blue"></div>
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#ec4899]" title="Rose"></div>
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#10b981]" title="Sage"></div>
-                <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#1e293b]" title="Graphite"></div>
-              </div>
-              <button 
-                onClick={onStudioClick}
-                className="text-xs font-bold text-neutral-600 hover:text-black underline cursor-pointer"
-              >
-                Customize
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Best Design / Materials Box */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            onClick={onExploreClick}
-            className="bg-[#fdfdfd] rounded-[2rem] p-6 shadow-sm relative overflow-hidden group cursor-pointer flex flex-col justify-between"
-          >
-            <div className="absolute right-4 top-4 w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
-              <ArrowUpRight className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-neutral-900 mb-1">10ft</div>
-              <p className="text-xs text-neutral-500 font-medium">Military Drop Tested</p>
-            </div>
-            <div className="mt-6 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-neutral-700" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-neutral-900">Armor Protection</h4>
-                <p className="text-xs text-neutral-500">Kevlar & Silicone cores</p>
-              </div>
-            </div>
-          </motion.div>
-
-        </div>
 
         {/* BOTTOM ROW BENTO BOXES */}
         
