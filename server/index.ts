@@ -4,6 +4,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { db, initSchema } from './db.js';
+import { seedNeonDatabaseIfEmpty } from './seedProducts.js';
 import { adminAuth, adminDb } from './firebase.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
@@ -91,6 +92,20 @@ async function syncUserToDB(email: string, name: string): Promise<{ user: any; c
   }
 }
 
+// ── Helper: parse JSON array column with fallback ──
+function parseJsonField(val: any, defaultVal: any) {
+  if (!val) return defaultVal;
+  if (Array.isArray(val) || typeof val === 'object') {
+    return (Array.isArray(val) && val.length === 0) ? defaultVal : val;
+  }
+  try {
+    const parsed = JSON.parse(val);
+    return (Array.isArray(parsed) && parsed.length === 0) ? defaultVal : parsed;
+  } catch {
+    return defaultVal;
+  }
+}
+
 // ── Helper: format a product row from DB into the API response shape ──
 function formatProduct(product: any) {
   if (!product) return null;
@@ -98,24 +113,26 @@ function formatProduct(product: any) {
     id: product.id,
     name: product.name,
     description: product.description || '',
-    price: product.price,
-    basePrice: product.price,        // backward compat alias
-    stock: product.stock ?? 0,
+    price: Number(product.price || 0),
+    basePrice: Number(product.price || 0),        // backward compat alias
+    stock: Number(product.stock ?? 0),
     category: product.category || 'general',
-    rating: product.rating ?? 5.0,
-    reviewsCount: product.reviews_count ?? 0,
+    rating: Number(product.rating ?? 5.0),
+    reviewsCount: Number(product.reviews_count ?? 0),
     image: product.image_data || product.image_url || '',
     image_data: product.image_data || '',
     image_url: product.image_url || '',
-    // Legacy empty arrays so old cart/checkout components don't crash
-    models: [],
-    materials: [],
-    colors: [],
-    tags: [],
-    features: [],
-    magsafe: false,
-    bestseller: false,
-    ecoFriendly: false,
+    models: parseJsonField(product.models, ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Google Pixel 8 Pro']),
+    materials: parseJsonField(product.materials, ['Smooth Liquid Silicone', 'Ultra-Tough Polycarbonate']),
+    colors: parseJsonField(product.colors, [
+      { id: 'charcoal', name: 'Midnight Charcoal', value: '#1A1B1C', bgClass: 'bg-[#1A1B1C]', textContrast: 'light' },
+      { id: 'sand', name: 'Alabaster Sand', value: '#DFD3C3', bgClass: 'bg-[#DFD3C3]', textContrast: 'dark' }
+    ]),
+    tags: parseJsonField(product.tags, ['MagSafe Compatible', 'Premium Build']),
+    features: parseJsonField(product.features, ['10ft Drop Protection', 'MagSafe Compatible', 'Scratch Resistant Coating']),
+    magsafe: Boolean(product.magsafe),
+    bestseller: Boolean(product.bestseller),
+    ecoFriendly: Boolean(product.eco_friendly),
     createdAt: product.created_at
   };
 }
@@ -464,11 +481,25 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 // GET /api/products — Public product catalog
 app.get('/api/products', async (req, res) => {
   try {
+    await seedNeonDatabaseIfEmpty(db);
     const resDb = await db.query('SELECT * FROM products ORDER BY created_at DESC');
     const products = resDb.rows as any[];
     res.json(products.map(formatProduct));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch product catalog' });
+  }
+});
+
+// POST /api/admin/products/seed — Admin manual trigger to re-seed or sync default catalog
+app.post('/api/admin/products/seed', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { force } = req.body || {};
+    await seedNeonDatabaseIfEmpty(db, Boolean(force));
+    const resDb = await db.query('SELECT * FROM products ORDER BY created_at DESC');
+    const products = resDb.rows as any[];
+    res.json({ success: true, products: products.map(formatProduct) });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to seed product catalog' });
   }
 });
 
@@ -1016,18 +1047,36 @@ app.get('/api/admin/products', authenticateToken, requireAdmin, async (req, res)
 // POST /api/admin/products — Admin adds a new product (with image upload)
 app.post('/api/admin/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { name, description, price, stock, category, image_data, image_url } = req.body;
+    const {
+      name, description, price, stock, category, image_data, image_url,
+      models, materials, colors, tags, features, magsafe, bestseller, ecoFriendly
+    } = req.body;
 
     if (!name || price === undefined || price < 0) {
       return res.status(400).json({ error: 'Product name and price are required' });
     }
 
     const id = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const modelsJson = JSON.stringify(models || ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Google Pixel 8 Pro']);
+    const materialsJson = JSON.stringify(materials || ['Smooth Liquid Silicone', 'Ultra-Tough Polycarbonate']);
+    const colorsJson = JSON.stringify(colors || [
+      { id: 'charcoal', name: 'Midnight Charcoal', value: '#1A1B1C', bgClass: 'bg-[#1A1B1C]', textContrast: 'light' },
+      { id: 'sand', name: 'Alabaster Sand', value: '#DFD3C3', bgClass: 'bg-[#DFD3C3]', textContrast: 'dark' }
+    ]);
+    const tagsJson = JSON.stringify(tags || ['MagSafe Compatible', 'Premium Build']);
+    const featuresJson = JSON.stringify(features || ['10ft Drop Protection', 'MagSafe Compatible', 'Scratch Resistant Coating']);
 
     await db.query(`
-      INSERT INTO products (id, name, description, price, stock, category, image_data, image_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [id, name.trim(), description || '', Number(price), Number(stock) || 0, category || 'general', image_data || '', image_url || '']);
+      INSERT INTO products (
+        id, name, description, price, stock, category, image_data, image_url,
+        models, materials, colors, tags, features, magsafe, bestseller, eco_friendly
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    `, [
+      id, name.trim(), description || '', Number(price), Number(stock) || 0, category || 'general', image_data || '', image_url || '',
+      modelsJson, materialsJson, colorsJson, tagsJson, featuresJson,
+      magsafe ? 1 : 0, bestseller ? 1 : 0, ecoFriendly ? 1 : 0
+    ]);
 
     const resDb = await db.query('SELECT * FROM products WHERE id = $1', [id]);
     const created = resDb.rows[0] as any;
@@ -1042,7 +1091,10 @@ app.post('/api/admin/products', authenticateToken, requireAdmin, async (req, res
 app.put('/api/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, category, image_data, image_url } = req.body;
+    const {
+      name, description, price, category, image_data, image_url,
+      models, materials, colors, tags, features, magsafe, bestseller, ecoFriendly
+    } = req.body;
 
     if (!name || price === undefined || Number(price) < 0) {
       return res.status(400).json({ error: 'Name and price are required' });
@@ -1066,6 +1118,14 @@ app.put('/api/admin/products/:id', authenticateToken, requireAdmin, async (req, 
       fieldsToUpdate.push(`image_url = $${paramIdx++}`);
       values.push(image_url);
     }
+    if (models !== undefined) { fieldsToUpdate.push(`models = $${paramIdx++}`); values.push(JSON.stringify(models)); }
+    if (materials !== undefined) { fieldsToUpdate.push(`materials = $${paramIdx++}`); values.push(JSON.stringify(materials)); }
+    if (colors !== undefined) { fieldsToUpdate.push(`colors = $${paramIdx++}`); values.push(JSON.stringify(colors)); }
+    if (tags !== undefined) { fieldsToUpdate.push(`tags = $${paramIdx++}`); values.push(JSON.stringify(tags)); }
+    if (features !== undefined) { fieldsToUpdate.push(`features = $${paramIdx++}`); values.push(JSON.stringify(features)); }
+    if (magsafe !== undefined) { fieldsToUpdate.push(`magsafe = $${paramIdx++}`); values.push(magsafe ? 1 : 0); }
+    if (bestseller !== undefined) { fieldsToUpdate.push(`bestseller = $${paramIdx++}`); values.push(bestseller ? 1 : 0); }
+    if (ecoFriendly !== undefined) { fieldsToUpdate.push(`eco_friendly = $${paramIdx++}`); values.push(ecoFriendly ? 1 : 0); }
 
     values.push(id);
     await db.query(`UPDATE products SET ${fieldsToUpdate.join(', ')} WHERE id = $${paramIdx}`, values);

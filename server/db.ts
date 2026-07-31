@@ -1,6 +1,7 @@
 import { Pool } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
 import path from 'path';
+import { seedNeonDatabaseIfEmpty } from './seedProducts.js';
 
 // Ensure .env is loaded before connecting
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -32,6 +33,21 @@ export async function initSchema() {
       );
     `);
     
+    // Ensure rich schema columns exist in Neon database
+    const columnsToAdd = [
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS models TEXT DEFAULT '[]';",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS materials TEXT DEFAULT '[]';",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS colors TEXT DEFAULT '[]';",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '[]';",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS features TEXT DEFAULT '[]';",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS magsafe INTEGER DEFAULT 0;",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS bestseller INTEGER DEFAULT 0;",
+      "ALTER TABLE products ADD COLUMN IF NOT EXISTS eco_friendly INTEGER DEFAULT 0;"
+    ];
+    for (const sql of columnsToAdd) {
+      await db.query(sql).catch(() => {});
+    }
+
     await db.query(`
       CREATE TABLE IF NOT EXISTS coupons (
         code TEXT PRIMARY KEY,
@@ -46,7 +62,10 @@ export async function initSchema() {
     await db.query('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);');
     await db.query('CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at);');
 
-    console.log('[POSTGRES] Schema initialized successfully.');
+    // Auto-seed default catalog if Neon database is empty
+    await seedNeonDatabaseIfEmpty(db);
+
+    console.log('[POSTGRES] Schema initialized and synced successfully.');
   } catch (error) {
     console.error('[POSTGRES] Error initializing schema:', error);
   }
@@ -54,4 +73,5 @@ export async function initSchema() {
 
 
 db.on('error', (err) => { console.error('[POSTGRES] Pool error:', err.message); });
+
 

@@ -190,10 +190,10 @@ export default function App() {
 
   const [productsLoading, setProductsLoading] = useState(true);
 
-  // Fetch products from database — no static fallback; admin adds products via dashboard
-  useEffect(() => {
+  // Fetch catalog & inventory from Neon Database (no-store to ensure fresh data on refresh/focus)
+  const fetchCatalog = () => {
     setProductsLoading(true);
-    fetch('/api/products')
+    fetch('/api/products', { cache: 'no-store' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch products');
         return res.json();
@@ -203,9 +203,25 @@ export default function App() {
       })
       .catch(err => {
         console.error('Error fetching products from database:', err);
-        setProducts([]);
       })
       .finally(() => setProductsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCatalog();
+
+    // Re-check inventory when user refreshes or returns to the website window
+    const handleFocus = () => {
+      fetch('/api/products', { cache: 'no-store' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (Array.isArray(data)) setProducts(data);
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
 
@@ -579,7 +595,7 @@ export default function App() {
   };
 
   if (isAdminView) {
-    return <AdminDashboard token={token} onClose={() => setIsAdminView(false)} />;
+    return <AdminDashboard token={token} onClose={() => setIsAdminView(false)} onCatalogSync={fetchCatalog} />;
   }
 
   return (

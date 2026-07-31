@@ -10,6 +10,7 @@ const API = '';
 interface AdminDashboardProps {
   token: string | null;
   onClose: () => void;
+  onCatalogSync?: () => void;
 }
 
 interface Product {
@@ -279,7 +280,7 @@ function ProductModal({
 // ──────────────────────────────────────────────
 // Main AdminDashboard Component
 // ──────────────────────────────────────────────
-export default function AdminDashboard({ token, onClose }: AdminDashboardProps) {
+export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'coupons'>('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -357,6 +358,7 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
       if (!resp.ok) throw new Error((await resp.json()).error);
       setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
       setRestockMap(prev => ({ ...prev, [productId]: '' }));
+      onCatalogSync?.();
       showToast('✅ Stock updated successfully');
     } catch (e: any) {
       showToast(`❌ ${e.message}`);
@@ -376,6 +378,7 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
       });
       if (!resp.ok) throw new Error((await resp.json()).error);
       setProducts(prev => prev.filter(p => p.id !== productId));
+      onCatalogSync?.();
       showToast('🗑️ Product deleted');
     } catch (e: any) {
       showToast(`❌ ${e.message}`);
@@ -471,6 +474,7 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
             } else {
               setProducts(prev => [p, ...prev]);
             }
+            onCatalogSync?.();
             setShowModal(false);
             showToast(typeof modalProduct === 'object' && modalProduct !== null ? '✅ Product updated' : '✅ Product added to catalog');
           }}
@@ -588,13 +592,43 @@ export default function AdminDashboard({ token, onClose }: AdminDashboardProps) 
                 Product Catalog
                 <span className="ml-3 text-xs text-neutral-500 font-bold uppercase tracking-wider bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">{products.length} products</span>
               </h2>
-              <button
-                onClick={() => { setModalProduct(null); setShowModal(true); }}
-                className="flex items-center gap-2 px-5 py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                Add New Product
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await fetch(`${API}/api/admin/products/seed`, {
+                        method: 'POST',
+                        headers: authHeader,
+                        body: JSON.stringify({ force: true })
+                      });
+                      const data = await res.json();
+                      if (data.success && data.products) {
+                        setProducts(data.products);
+                        onCatalogSync?.();
+                        showToast('🔄 Catalog & Inventory synced from Neon DB!');
+                      } else {
+                        throw new Error(data.error || 'Failed to sync');
+                      }
+                    } catch (e: any) {
+                      showToast(`❌ ${e.message || 'Sync failed'}`);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer border border-neutral-300"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  Sync Catalog & Inventory
+                </button>
+                <button
+                  onClick={() => { setModalProduct(null); setShowModal(true); }}
+                  className="flex items-center gap-2 px-5 py-3 bg-[#cfff71]/80 backdrop-blur-sm hover:bg-[#cfff71] text-neutral-900 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add New Product
+                </button>
+              </div>
             </div>
 
             {loading ? (
