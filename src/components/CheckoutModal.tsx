@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CartItem, ShippingDetails, PaymentDetails, Order } from '../types';
-import { X, ShieldCheck, Lock, CreditCard, ChevronRight, Check, HelpCircle, ArrowLeft, Loader2, Calendar, FileText, BadgeCheck, ShieldAlert } from 'lucide-react';
+import { X, ShieldCheck, Lock, CreditCard, ChevronRight, Check, HelpCircle, ArrowLeft, Loader2, Calendar, FileText, BadgeCheck, ShieldAlert, User } from 'lucide-react';
+import PhoneCaseRenderer from './PhoneCaseRenderer';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface CheckoutModalProps {
   cart: CartItem[];
   onOrderConfirmed: (order: Order) => void;
   user?: any;
+  onRequestLogin?: () => void;
 }
 
 export default function CheckoutModal({
@@ -15,7 +17,8 @@ export default function CheckoutModal({
   onClose,
   cart,
   onOrderConfirmed,
-  user
+  user,
+  onRequestLogin
 }: CheckoutModalProps) {
   
   if (!isOpen) return null;
@@ -32,8 +35,8 @@ export default function CheckoutModal({
   const tax = 0; // Removed for trial
   const total = taxableAmount + shippingCost + tax;
 
-  // Checkout phase: 'shipping' | 'payment' | 'authorizing' | 'success'
-  const [step, setStep] = useState<'shipping' | 'payment' | 'authorizing' | 'success'>('shipping');
+  // Checkout phase: 'auth' | 'shipping' | 'payment' | 'authorizing' | 'success'
+  const [step, setStep] = useState<'auth' | 'shipping' | 'payment' | 'authorizing' | 'success'>('auth');
   
   // Simulated logs
   const [authLogs, setAuthLogs] = useState<string[]>([]);
@@ -71,6 +74,17 @@ export default function CheckoutModal({
         fullName: user.fullName || '',
         email: user.email || ''
       }));
+    }
+  }, [isOpen, user]);
+
+  // Handle auth step logic
+  useEffect(() => {
+    if (isOpen) {
+      if (user) {
+        setStep('shipping');
+      } else {
+        setStep('auth');
+      }
     }
   }, [isOpen, user]);
 
@@ -383,6 +397,7 @@ export default function CheckoutModal({
             </div>
 
             {/* Simulated Stepper Indicators */}
+            {step !== 'auth' && (
             <div className="flex items-center gap-2 pt-2 border-t border-neutral-200">
               <div className="flex items-center gap-1.5 flex-1 select-none">
                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-mono font-bold ${
@@ -405,6 +420,37 @@ export default function CheckoutModal({
                 <span className={`text-[10px] font-mono tracking-wider font-bold ${step === 'success' ? 'text-neutral-900' : 'text-neutral-400'}`}>Receipt</span>
               </div>
             </div>
+            )}
+
+            {/* STEP 0: AUTH COMPARTMENT */}
+            {step === 'auth' && (
+              <div className="space-y-6 py-8">
+                <div className="text-center space-y-3">
+                  <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-neutral-200">
+                    <User className="w-7 h-7 text-neutral-400" />
+                  </div>
+                  <h3 className="font-sans text-xl font-extrabold text-neutral-900">Almost there!</h3>
+                  <p className="text-sm text-neutral-500 font-medium">Log in for a faster checkout experience, or continue as a guest.</p>
+                </div>
+
+                <div className="flex flex-col gap-3 pt-4 max-w-sm mx-auto">
+                  <button
+                    onClick={() => {
+                      if (onRequestLogin) onRequestLogin();
+                    }}
+                    className="w-full py-4 bg-neutral-900 text-white font-sans font-extrabold text-[13px] uppercase tracking-wider rounded-xl hover:bg-neutral-800 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                  >
+                    Log In / Register
+                  </button>
+                  <button
+                    onClick={() => setStep('shipping')}
+                    className="w-full py-4 bg-white border border-neutral-200 text-neutral-700 font-sans font-extrabold text-[13px] uppercase tracking-wider rounded-xl hover:bg-neutral-50 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                  >
+                    Continue as Guest
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* STEP 1: SHIPPING COMPARTMENT */}
             {step === 'shipping' && (
@@ -793,12 +839,26 @@ export default function CheckoutModal({
                 <div className="space-y-4 max-h-[220px] overflow-y-auto pr-2">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex gap-3 items-center text-xs">
-                      <span className="text-neutral-900 font-mono font-bold bg-neutral-200 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 text-[11px]">
-                        {item.quantity}
+                      <div className="w-10 h-12 bg-white rounded-lg border border-neutral-200 flex items-center justify-center p-0 flex-shrink-0 overflow-hidden shadow-sm">
+                        {item.product.image && item.product.image !== 'custom' && (item.product.image.startsWith('/') || item.product.image.startsWith('http') || item.product.image.startsWith('data:')) ? (
+                          <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover object-center" />
+                        ) : (
+                          <span className="scale-[0.25] origin-center p-1">
+                            <PhoneCaseRenderer
+                              model={item.selectedModel}
+                              material={item.selectedMaterial}
+                              color={item.selectedColor}
+                              size="sm"
+                            />
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-neutral-900 font-mono font-bold bg-neutral-100 border border-neutral-200 px-2 py-0.5 rounded flex items-center justify-center flex-shrink-0 text-[10px]">
+                        x{item.quantity}
                       </span>
                       <div className="flex-1 min-w-0">
                         <strong className="text-neutral-900 block truncate leading-tight font-sans text-xs font-bold uppercase tracking-wide">{item.product.name}</strong>
-                        <span className="text-[10px] font-mono font-semibold text-neutral-500 block truncate">{item.selectedModel}</span>
+                        <span className="text-[10px] font-mono font-semibold text-neutral-500 block truncate">{item.selectedModel} • {item.selectedColor?.name || ''}</span>
                       </div>
                       <span className="font-mono text-neutral-900 font-extrabold flex-shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>

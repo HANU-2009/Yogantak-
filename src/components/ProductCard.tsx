@@ -9,7 +9,7 @@ interface ProductCardProps {
   isSaved?: boolean;
   onToggleSaved?: (productId: string) => void;
   onOpenDetails: (product: Product, chosenModel: PhoneModel, chosenColor: CaseColor, chosenMaterial: CaseMaterial) => void;
-  onCustomizeClick: (product: Product, chosenModel: PhoneModel, chosenColor: CaseColor, chosenMaterial: CaseMaterial) => void;
+  onCustomizeClick?: (product: Product, chosenModel: PhoneModel, chosenColor: CaseColor, chosenMaterial: CaseMaterial) => void;
   onQuickAdd: (product: Product, model: PhoneModel, color: CaseColor, material: CaseMaterial) => void;
   layout?: 'grid' | 'list';
 }
@@ -222,16 +222,18 @@ export default function ProductCard({
             <span>Quick Add</span>
           </button>
           
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCustomizeClick(product, activeModel, activeColor, activeMaterial);
-            }}
-            className="w-4/5 py-3 bg-white/70 backdrop-blur-sm hover:bg-white text-neutral-900 font-bold text-xs uppercase tracking-wider rounded-full flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-neutral-900 fill-neutral-900" />
-            <span>Customize</span>
-          </button>
+          {onCustomizeClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCustomizeClick(product, activeModel, activeColor, activeMaterial);
+              }}
+              className="w-4/5 py-3 bg-white/70 backdrop-blur-sm hover:bg-white text-neutral-900 font-bold text-xs uppercase tracking-wider rounded-full flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-neutral-900 fill-neutral-900" />
+              <span>Customize</span>
+            </button>
+          )}
         </div>
       </div>
 

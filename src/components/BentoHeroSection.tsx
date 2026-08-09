@@ -1,13 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Star, Heart, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Star, Heart } from 'lucide-react';
 
 interface BentoHeroProps {
   onExploreClick: () => void;
-  onStudioClick: () => void;
 }
 
-export default function BentoHeroSection({ onExploreClick, onStudioClick }: BentoHeroProps) {
+export default function BentoHeroSection({ onExploreClick }: BentoHeroProps) {
   return (
     <div className="w-full bg-[#f4f5f1] min-h-screen pt-20 sm:pt-28 pb-8 sm:pb-12 px-3 sm:px-6 lg:px-8 text-neutral-900 font-sans">
       <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-12 gap-3 sm:gap-6">
@@ -58,49 +57,14 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
           </div>
         </motion.div>
 
-        {/* BOTTOM ROW BENTO BOXES (Small square cards side-by-side on mobile grid-cols-2) */}
-        
-        {/* Studio Box */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          onClick={onStudioClick}
-          className="col-span-1 md:col-span-6 lg:col-span-3 bg-[#fdfdfd] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm flex flex-col justify-between group cursor-pointer border border-neutral-100 hover:border-neutral-300 transition-all aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px]"
-        >
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-neutral-100 text-neutral-700 text-[10px] sm:text-xs font-semibold">
-              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Studio
-            </span>
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-neutral-100 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-colors">
-              <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4" />
-            </div>
-          </div>
-          <div className="my-auto">
-            <h3 className="text-xs sm:text-lg font-bold text-neutral-900 leading-snug line-clamp-2">
-              Monogram Studio
-            </h3>
-            <p className="text-[10px] sm:text-xs text-neutral-500 mt-0.5 hidden sm:block">Add custom gold foil letters</p>
-          </div>
-          <div className="flex gap-1.5 mt-auto pt-1">
-            <div className="w-8 h-8 sm:w-14 sm:h-14 bg-neutral-100 rounded-lg sm:rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-              <img src="/products/Gemini_Generated_Image_t6puc4t6puc4t6pu.png" className="w-full h-full object-cover" alt="item" />
-            </div>
-            <div className="w-8 h-8 sm:w-14 sm:h-14 bg-neutral-100 rounded-lg sm:rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-              <img src="/products/separate_image_2.png" className="w-full h-full object-cover" alt="item" />
-            </div>
-            <div className="w-8 h-8 sm:w-14 sm:h-14 bg-neutral-100 rounded-lg sm:rounded-2xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-              <img src="/products/case_set2_2.png" className="w-full h-full object-cover" alt="item" />
-            </div>
-          </div>
-        </motion.div>
+        {/* BOTTOM ROW BENTO BOXES */}
 
         {/* Downloads / Reviews */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="col-span-1 md:col-span-6 lg:col-span-2 bg-[#fdfdfd] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm flex flex-col items-center justify-center text-center gap-2 aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px]"
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="col-span-1 md:col-span-4 lg:col-span-3 bg-[#fdfdfd] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm flex flex-col items-center justify-center text-center gap-2 aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px]"
         >
           <div className="w-14 h-14 sm:w-24 sm:h-24 bg-[#3d70f5] rounded-full flex flex-col items-center justify-center text-white shadow-md shadow-[#3d70f5]/30 cursor-pointer hover:scale-105 transition-transform shrink-0">
             <span className="text-xs sm:text-xl font-bold">5m+</span>
@@ -115,8 +79,8 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="col-span-1 md:col-span-6 lg:col-span-4 bg-[#fdfdfd] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm relative overflow-hidden group cursor-pointer flex flex-col justify-between aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px]"
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="col-span-1 md:col-span-4 lg:col-span-5 bg-[#fdfdfd] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm relative overflow-hidden group cursor-pointer flex flex-col justify-between aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px]"
           onClick={onExploreClick}
         >
           <div className="flex items-center justify-between z-10 relative">
@@ -144,8 +108,8 @@ export default function BentoHeroSection({ onExploreClick, onStudioClick }: Bent
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="col-span-1 md:col-span-6 lg:col-span-3 bg-[#e8eaec] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm relative overflow-hidden aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px] flex flex-col justify-between"
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="col-span-2 md:col-span-4 lg:col-span-4 bg-[#e8eaec] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 shadow-sm relative overflow-hidden aspect-square sm:aspect-auto min-h-[160px] sm:min-h-[220px] flex flex-col justify-between"
         >
           <div className="flex justify-end z-10 relative">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">

@@ -339,11 +339,11 @@ export default function ProductDetailsModal({
                   {/* Render based on selected index */}
                   {activeThumbnailIndex === 0 ? (
                     (product.image && product.image !== 'custom' && (product.image.startsWith('http') || product.image.startsWith('data:'))) ? (
-                      <div className="w-full h-full flex items-center justify-center py-4 px-6">
+                      <div className="w-full h-full flex items-center justify-center p-0 overflow-hidden rounded-[1.5rem]">
                         <img 
                           src={product.image} 
                           alt={product.name} 
-                          className="max-w-full max-h-full object-contain drop-shadow-xl rounded-[1.5rem]" 
+                          className="w-full h-full object-cover object-center" 
                         />
                       </div>
                     ) : (

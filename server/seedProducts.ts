@@ -141,16 +141,16 @@ export async function seedNeonDatabaseIfEmpty(db: any, force = false): Promise<b
     return false;
   }
 
+  console.log('[POSTGRES] Seeding Neon database with default luxury catalog...');
   try {
-    console.log('[POSTGRES] Seeding Neon database with default luxury catalog...');
-    for (const p of DEFAULT_PRODUCTS_SEED) {
-      const modelsJson = JSON.stringify(p.models);
-      const materialsJson = JSON.stringify(p.materials);
-      const colorsJson = JSON.stringify(p.colors);
-      const tagsJson = JSON.stringify(p.tags);
-      const featuresJson = JSON.stringify(p.features);
+  for (const p of DEFAULT_PRODUCTS_SEED) {
+    const modelsJson = JSON.stringify(p.models);
+    const materialsJson = JSON.stringify(p.materials);
+    const colorsJson = JSON.stringify(p.colors);
+    const tagsJson = JSON.stringify(p.tags);
+    const featuresJson = JSON.stringify(p.features);
 
-      await db.query(`
+    await db.query(`
         INSERT INTO products (
           id, name, description, price, stock, category, image_data, image_url,
           rating, reviews_count, models, materials, colors, tags, features,
@@ -158,16 +158,16 @@ export async function seedNeonDatabaseIfEmpty(db: any, force = false): Promise<b
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         ON CONFLICT (id) DO NOTHING
       `, [
-        p.id, p.name, p.description, p.price, p.stock, p.category, '', p.image_url,
-        p.rating, p.reviews_count, modelsJson, materialsJson, colorsJson, tagsJson, featuresJson,
-        p.magsafe, p.bestseller, p.eco_friendly
-      ]);
-    }
-
-    console.log('[POSTGRES] Successfully seeded default products into Neon database.');
-    return true;
-  } catch (error) {
-    console.error('[POSTGRES] Failed to seed Neon database:', error);
-    return false;
+      p.id, p.name, p.description, p.price, p.stock, p.category, '', p.image_url,
+      p.rating, p.reviews_count, modelsJson, materialsJson, colorsJson, tagsJson, featuresJson,
+      p.magsafe, p.bestseller, p.eco_friendly
+    ]);
   }
+
+  console.log('[POSTGRES] Successfully seeded default products into Neon database.');
+  return true;
+} catch (error) {
+  console.error('[POSTGRES] Failed to seed Neon database:', error);
+  return false;
+}
 }

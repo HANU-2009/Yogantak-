@@ -99,19 +99,30 @@ export default function CartDrawer({
                   className="flex items-start gap-3 sm:gap-4 pb-5 sm:pb-6 border-b border-neutral-200 last:border-0 last:pb-0 group"
                 >
                   {/* Miniature model render preview or placeholder */}
-                  <div className="w-16 h-24 sm:w-20 sm:h-28 bg-white flex items-center justify-center p-2 rounded-[1rem] border border-neutral-200 shadow-sm flex-shrink-0">
-                    <span className="scale-[0.45] origin-center">
-                      <PhoneCaseRenderer
-                        model={item.selectedModel}
-                        material={item.selectedMaterial}
-                        color={item.selectedColor}
-                        monogramText={item.customConfig?.monogramText || ''}
-                        monogramColor={item.customConfig?.monogramColor || 'gold'}
-                        magsafe={item.customConfig?.magsafe ?? item.product.magsafe}
-                        buttonColor={item.customConfig?.buttonColor || 'matching'}
-                        size="md"
+                  <div className="w-16 h-24 sm:w-20 sm:h-28 bg-white flex items-center justify-center p-0 rounded-[1rem] border border-neutral-200 shadow-sm flex-shrink-0 overflow-hidden">
+                    {item.product.image && item.product.image !== 'custom' && (item.product.image.startsWith('/') || item.product.image.startsWith('http') || item.product.image.startsWith('data:')) ? (
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover object-center"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
                       />
-                    </span>
+                    ) : (
+                      <span className="scale-[0.45] origin-center p-2">
+                        <PhoneCaseRenderer
+                          model={item.selectedModel}
+                          material={item.selectedMaterial}
+                          color={item.selectedColor}
+                          monogramText={item.customConfig?.monogramText || ''}
+                          monogramColor={item.customConfig?.monogramColor || 'gold'}
+                          magsafe={item.customConfig?.magsafe ?? item.product.magsafe}
+                          buttonColor={item.customConfig?.buttonColor || 'matching'}
+                          size="md"
+                        />
+                      </span>
+                    )}
                   </div>
 
                   {/* Core description details */}

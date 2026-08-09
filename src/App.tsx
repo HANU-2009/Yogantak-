@@ -621,11 +621,6 @@ export default function App() {
       {activeTab === 'catalog' && (
         <BentoHeroSection
           onExploreClick={handleScrollToCatalog}
-          onStudioClick={() => {
-            setLabPreset(undefined);
-            setActiveTab('lab');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
         />
       )}
 
@@ -842,13 +837,6 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: INTERACTIVE CUSTOMIZER LABORATORY */}
-        {activeTab === 'lab' && (
-          <ProductVisualizer
-            onAddCustomCase={handleAddCustomCase}
-            initialPreset={labPreset}
-          />
-        )}
 
         {/* TAB 3: LOGISTICS HISTORY / ORDER TRACKING */}
         {activeTab === 'orders' && (

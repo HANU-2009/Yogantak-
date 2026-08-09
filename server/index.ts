@@ -646,11 +646,19 @@ app.delete('/api/wishlist/:productId', authenticateToken, async (req: AuthReques
 
 app.get('/api/coupons/:code', async (req, res) => {
   try {
-    const { code } = req.params;
-    const resDb = await db.query('SELECT * FROM coupons WHERE code = $1 AND active = 1', [code.toUpperCase()]);
-    const coupon = resDb.rows[0] as any;
-    if (!coupon) return res.status(404).json({ error: 'Invalid or inactive coupon' });
-    res.json(coupon);
+    const code = req.params.code.toUpperCase();
+    if (adminDb) {
+      const doc = await adminDb.collection('coupons').doc(code).get();
+      if (!doc.exists) return res.status(404).json({ error: 'Invalid or inactive coupon' });
+      const coupon = doc.data();
+      if (!coupon || !coupon.active) return res.status(404).json({ error: 'Invalid or inactive coupon' });
+      return res.json(coupon);
+    } else {
+      const resDb = await db.query('SELECT * FROM coupons WHERE code = $1 AND active = 1', [code]);
+      const coupon = resDb.rows[0] as any;
+      if (!coupon) return res.status(404).json({ error: 'Invalid or inactive coupon' });
+      return res.json(coupon);
+    }
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch coupon' });
   }
@@ -1205,8 +1213,14 @@ app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, async (
 // GET /api/admin/coupons — All coupons
 app.get('/api/admin/coupons', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const resDb = await db.query('SELECT * FROM coupons ORDER BY code ASC');
-    res.json(resDb.rows);
+    if (adminDb) {
+      const snapshot = await adminDb.collection('coupons').get();
+      const coupons = snapshot.docs.map((doc: any) => doc.data());
+      return res.json(coupons);
+    } else {
+      const resDb = await db.query('SELECT * FROM coupons ORDER BY code ASC');
+      return res.json(resDb.rows);
+    }
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch coupons' });
   }
@@ -1219,13 +1233,28 @@ app.post('/api/admin/coupons', authenticateToken, requireAdmin, async (req, res)
     return res.status(400).json({ error: 'Code, type, and discount value required' });
   }
 
+  const couponCode = code.toUpperCase();
+  const couponData = {
+    code: couponCode,
+    discount_type,
+    discount_value: Number(discount_value),
+    min_purchase: Number(min_purchase) || 0,
+    expires_at: expires_at || null,
+    active: 1,
+    updatedAt: new Date().toISOString()
+  };
+
   try {
+    if (adminDb) {
+      await adminDb.collection('coupons').doc(couponCode).set(couponData, { merge: true });
+    }
     await db.query(`
       INSERT INTO coupons (code, discount_type, discount_value, min_purchase, expires_at, active)
       VALUES ($1, $2, $3, $4, $5, 1)
       ON CONFLICT(code) DO UPDATE SET discount_type = EXCLUDED.discount_type, discount_value = EXCLUDED.discount_value, min_purchase = EXCLUDED.min_purchase, expires_at = EXCLUDED.expires_at, active = 1
-    `, [code.toUpperCase(), discount_type, Number(discount_value), Number(min_purchase) || 0, expires_at || null]);
-    res.status(201).json({ success: true });
+    `, [couponCode, discount_type, Number(discount_value), Number(min_purchase) || 0, expires_at || null]).catch(() => {});
+
+    res.status(201).json({ success: true, coupon: couponData });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create coupon' });
   }
@@ -1233,8 +1262,12 @@ app.post('/api/admin/coupons', authenticateToken, requireAdmin, async (req, res)
 
 // DELETE /api/admin/coupons/:code — Delete coupon
 app.delete('/api/admin/coupons/:code', authenticateToken, requireAdmin, async (req, res) => {
+  const couponCode = req.params.code.toUpperCase();
   try {
-    await db.query('DELETE FROM coupons WHERE code = $1', [req.params.code.toUpperCase()]);
+    if (adminDb) {
+      await adminDb.collection('coupons').doc(couponCode).delete();
+    }
+    await db.query('DELETE FROM coupons WHERE code = $1', [couponCode]).catch(() => {});
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete coupon' });

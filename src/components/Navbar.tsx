@@ -62,7 +62,6 @@ export default function Navbar({
 
   const navLinks = [
     { id: 'catalog', label: 'Catalog' },
-    { id: 'lab', label: 'Studio' },
     { id: 'orders', label: 'Orders' },
     { id: 'about', label: 'About' },
     { id: 'contact', label: 'Contact' }
@@ -232,15 +231,6 @@ export default function Navbar({
           <span className="text-[9px] uppercase tracking-wider font-semibold font-sans">Catalog</span>
         </button>
 
-        <button
-          onClick={() => handleNavClick('lab')}
-          className={`flex flex-col items-center gap-1 px-3 py-1 rounded-full transition-all ${
-            activeTab === 'lab' ? 'text-white scale-105 font-bold' : 'text-neutral-400 hover:text-white'
-          }`}
-        >
-          <Sparkles className="w-4.5 h-4.5" />
-          <span className="text-[9px] uppercase tracking-wider font-semibold font-sans">Studio</span>
-        </button>
 
         <button
           onClick={() => handleNavClick('orders')}
