@@ -42,6 +42,48 @@ interface Order {
   items: any[];
 }
 
+// ── Image Downscaling Helper (Prevents Payload Too Large) ──
+const compressImage = (file: File, maxDimension = 1000, quality = 0.85): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('Please upload a valid image file'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error('Failed to process image file'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+};
+
 // ──────────────────────────────────────────────
 // Sub-component: Add / Edit Product Modal
 // ──────────────────────────────────────────────
@@ -67,23 +109,23 @@ function ProductModal({
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageFile = (file: File) => {
+  const handleImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file (JPG, PNG, WebP, etc.)');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be less than 10MB');
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Image must be less than 15MB');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setImageData(result);
-      setImagePreview(result);
-      setError('');
-    };
-    reader.readAsDataURL(file);
+    setError('');
+    try {
+      const compressedData = await compressImage(file);
+      setImageData(compressedData);
+      setImagePreview(compressedData);
+    } catch (err: any) {
+      setError(err.message || 'Error processing image');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -117,7 +159,16 @@ function ProductModal({
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body)
       });
-      const data = await resp.json();
+
+      const contentType = resp.headers.get('content-type');
+      let data: any = {};
+      if (contentType && contentType.includes('application/json')) {
+        data = await resp.json();
+      } else {
+        const text = await resp.text();
+        data = { error: text ? (text.length > 120 ? text.slice(0, 120) + '...' : text) : `Server error (${resp.status})` };
+      }
+
       if (!resp.ok) throw new Error(data.error || 'Save failed');
       onSaved(data.product);
     } catch (e: any) {
@@ -348,6 +399,22 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
 
   useEffect(() => { fetchAll(); }, []);
 
+  // ── Helper for safe error messages ──
+  const getErrorMessage = async (resp: Response, fallback: string): Promise<string> => {
+    try {
+      const contentType = resp.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await resp.json();
+        return data.error || fallback;
+      } else {
+        const text = await resp.text();
+        return text ? (text.length > 100 ? text.slice(0, 100) + '...' : text) : fallback;
+      }
+    } catch {
+      return fallback;
+    }
+  };
+
   // ── Restock ──
   const handleRestock = async (productId: string) => {
     const newStock = Number(restockMap[productId]);
@@ -362,7 +429,10 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
         headers: authHeader,
         body: JSON.stringify({ stock: newStock })
       });
-      if (!resp.ok) throw new Error((await resp.json()).error);
+      if (!resp.ok) {
+        const errMsg = await getErrorMessage(resp, 'Failed to update stock');
+        throw new Error(errMsg);
+      }
       setProducts(prev => prev.map(p => p.id === productId ? { ...p, stock: newStock } : p));
       setRestockMap(prev => ({ ...prev, [productId]: '' }));
       onCatalogSync?.();
@@ -383,7 +453,10 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
         method: 'DELETE',
         headers: authHeader
       });
-      if (!resp.ok) throw new Error((await resp.json()).error);
+      if (!resp.ok) {
+        const errMsg = await getErrorMessage(resp, 'Failed to delete product');
+        throw new Error(errMsg);
+      }
       setProducts(prev => prev.filter(p => p.id !== productId));
       onCatalogSync?.();
       showToast('🗑️ Product deleted');
@@ -426,7 +499,10 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
           min_purchase: Number(couponForm.min_purchase) || 0
         })
       });
-      if (!resp.ok) throw new Error((await resp.json()).error);
+      if (!resp.ok) {
+        const errMsg = await getErrorMessage(resp, 'Failed to create coupon');
+        throw new Error(errMsg);
+      }
       setCouponForm({ code: '', discount_type: 'percent', discount_value: '', min_purchase: '' });
       showToast('✅ Coupon created');
       fetchAll();
