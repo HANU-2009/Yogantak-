@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server/dev.cjs",
     "server": "npx tsx server/index.ts",
-    "build": "esbuild api/index.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "start": "npx tsx server/index.ts",
     "clean": "rm -rf dist data.db",
