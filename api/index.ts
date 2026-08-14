@@ -45,7 +45,7 @@ async function syncUserToDB(email: string, name: string): Promise<{ user: any; c
   if (!adminDb) {
     console.warn('[DEV MODE] Firebase not initialized. Using mock user data.');
     return {
-      user: { id: email, email, fullName: name || email.split('@')[0], role: targetRole },
+      user: { id: email, email, fullName: name || email.split('@')[0], role: targetRole, shipping: null },
       cart: []
     };
   }
@@ -80,13 +80,13 @@ async function syncUserToDB(email: string, name: string): Promise<{ user: any; c
     }
 
     return {
-      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
+      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, shipping: user.shipping || null },
       cart
     };
   } catch (err) {
     console.warn('[DEV MODE] Firestore operation failed, falling back to local user state:', err);
     return {
-      user: { id: email, email, fullName: name || email.split('@')[0], role: targetRole },
+      user: { id: email, email, fullName: name || email.split('@')[0], role: targetRole, shipping: null },
       cart: []
     };
   }
@@ -568,8 +568,33 @@ app.post('/api/products/:id/reviews', async (req, res) => {
 });
 
 // ==========================================
-// 3. PERSISTENT CART & WISHLIST APIS
+// 3. PERSISTENT CART, WISHLIST, & USER PROFILE APIS
 // ==========================================
+
+app.get('/api/user/shipping', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!adminDb) return res.json(null);
+    const doc = await adminDb.collection('users').doc(req.user!.email).get();
+    res.json(doc.data()?.shipping || null);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve shipping details' });
+  }
+});
+
+app.post('/api/user/shipping', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const shipping = req.body;
+    if (adminDb) {
+      await adminDb.collection('users').doc(req.user!.email).update({
+        shipping,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    res.json({ success: true, shipping });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save shipping details' });
+  }
+});
 
 app.get('/api/cart', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -667,6 +692,76 @@ app.get('/api/coupons/:code', async (req, res) => {
 // 5. SECURE ORDER PLACEMENT APIS
 // ==========================================
 
+app.post('/api/orders', async (req: Request, res: Response) => {
+  try {
+    const { 
+      userId, email, items, subtotal, tax, total, 
+      shippingName, shippingAddress, shippingCity, shippingState, shippingZip, shippingCountry, 
+      couponCode, paymentId 
+    } = req.body;
+
+    if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+    // Enforce stock logic
+    for (const item of items) {
+      const resDb = await db.query('SELECT stock FROM products WHERE id = $1', [item.product?.id]);
+      const prod = resDb.rows[0] as any;
+      if (!prod || prod.stock < item.quantity) {
+        return res.status(400).json({ error: `Not enough stock for ${item.product?.name}` });
+      }
+    }
+
+    // Deduct stock
+    for (const item of items) {
+      await db.query('UPDATE products SET stock = GREATEST(0, stock - $1) WHERE id = $2', [item.quantity, item.product?.id]);
+    }
+
+    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const orderData = {
+      id: orderId,
+      userId: userId || email,
+      email: email,
+      status: 'processing',
+      subtotal,
+      tax,
+      total,
+      shippingName,
+      shippingAddress,
+      shippingCity,
+      shippingState,
+      shippingZip,
+      shippingCountry,
+      couponCode: couponCode || null,
+      paymentId: paymentId || null,
+      createdAt: new Date().toISOString(),
+      items: items.map((item: any) => ({
+        productId: item.product?.id,
+        productName: item.product?.name,
+        quantity: item.quantity,
+        price: item.product?.price,
+        customConfig: item.customConfig || null
+      }))
+    };
+
+    if (adminDb) {
+      // Save order to Firestore
+      await adminDb.collection('orders').doc(orderId).set(orderData);
+
+      // If user is logged in, optionally clear cart.
+      if (userId && userId !== email) {
+        await adminDb.collection('users').doc(email).update({ cart: [] }).catch(() => {});
+      } else {
+        await adminDb.collection('users').doc(email).update({ cart: [] }).catch(() => {});
+      }
+    }
+
+    res.json({ success: true, orderId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to place order' });
+  }
+});
+
 app.post('/api/orders/checkout', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
@@ -718,6 +813,14 @@ app.post('/api/orders/checkout', authenticateToken, async (req: AuthRequest, res
     if (adminDb) {
       // Save order to Firestore
       await adminDb.collection('orders').doc(orderId).set(orderData);
+
+      // Optionally remember shipping details if explicitly requested (e.g. rememberShipping: true)
+      if (req.body.rememberShipping) {
+        await adminDb.collection('users').doc(req.user!.email).update({
+          shipping,
+          updatedAt: new Date().toISOString()
+        });
+      }
 
       // Clear cart
       await adminDb.collection('users').doc(req.user!.email).update({ cart: [] });
