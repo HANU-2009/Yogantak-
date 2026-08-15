@@ -1,14 +1,24 @@
 export type PhoneModel = 
+  | 'iPhone 17 Pro Max'
+  | 'iPhone 17'
   | 'iPhone 15 Pro Max' 
   | 'iPhone 15 Pro' 
   | 'iPhone 15' 
+  | 'iPhone 13'
   | 'Samsung Galaxy S24 Ultra' 
   | 'Samsung Galaxy S24+' 
+  | 'Samsung Galaxy A36 5G'
+  | 'Samsung Galaxy M35 5G'
   | 'Google Pixel 8 Pro'
   | 'Nothing Phone (2)'
   | 'OnePlus 12'
+  | 'Realme 14T 5G'
+  | 'Realme GT 6T'
+  | 'Realme P4X 5G'
+  | 'Oppo A3x 5G'
   | 'Samsung Galaxy Z Fold 5'
-  | 'Motorola Edge';
+  | 'Motorola Edge'
+  | (string & {});
 
 export type CaseMaterial = 
   | 'Premium Pebble Leather'

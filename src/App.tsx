@@ -362,36 +362,80 @@ export default function App() {
     );
   };
 
-  // Filter list of cases using the criteria (simplified for flat product schema)
+  // Filter list of cases using search and filter criteria
   const getFilteredProducts = () => {
     let filtered = [...products];
 
-    // Search query matching
+    // 1. Search query matching across name, description, category, models, materials, tags, features, colors
     if (searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q)
+        (p.category || '').toLowerCase().includes(q) ||
+        (Array.isArray(p.models) && p.models.some(m => m.toLowerCase().includes(q))) ||
+        (Array.isArray(p.materials) && p.materials.some(m => m.toLowerCase().includes(q))) ||
+        (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q))) ||
+        (Array.isArray(p.features) && p.features.some(f => f.toLowerCase().includes(q))) ||
+        (Array.isArray(p.colors) && p.colors.some((c: any) => (c.name || '').toLowerCase().includes(q) || (c.id || '').toLowerCase().includes(q)))
       );
     }
 
-    // Category filter (using product.category field)
+    // 2. Selected Models filter
+    if (selectedModels.length > 0) {
+      filtered = filtered.filter(p =>
+        Array.isArray(p.models) && selectedModels.some(m => p.models.includes(m))
+      );
+    }
+
+    // 3. Selected Case Types filter
+    if (selectedCaseTypes.length > 0) {
+      filtered = filtered.filter(p => {
+        const types = getProductCaseTypes(p);
+        return selectedCaseTypes.some(t => types.includes(t));
+      });
+    }
+
+    // 4. Selected Materials filter
+    if (selectedMaterials.length > 0) {
+      filtered = filtered.filter(p =>
+        Array.isArray(p.materials) && selectedMaterials.some(m => p.materials.includes(m))
+      );
+    }
+
+    // 5. Selected Colors filter
+    if (selectedColors.length > 0) {
+      filtered = filtered.filter(p =>
+        Array.isArray(p.colors) && selectedColors.some(colId => p.colors.some((c: any) => c.id === colId || (c.name || '').toLowerCase().includes(colId)))
+      );
+    }
+
+    // 6. MagSafe filter
+    if (magsafeFilter) {
+      filtered = filtered.filter(p => Boolean(p.magsafe));
+    }
+
+    // 7. Wireless Charging filter
+    if (wirelessFilter) {
+      filtered = filtered.filter(p => Boolean(p.magsafe) || (Array.isArray(p.features) && p.features.some(f => f.toLowerCase().includes('wireless'))));
+    }
+
+    // 8. Category filter
     if (activeCategory !== 'all') {
       filtered = filtered.filter(p =>
         (p.category || '').toLowerCase().includes(activeCategory.toLowerCase())
       );
     }
 
-    // In Stock filter
+    // 9. In Stock filter
     if (inStockFilter) {
       filtered = filtered.filter(p => (p.stock ?? 0) > 0);
     }
 
-    // Price range filtering
+    // 10. Price range filtering
     filtered = filtered.filter(p => (p.price ?? p.basePrice ?? 0) >= minPrice && (p.price ?? p.basePrice ?? 0) <= maxPrice);
 
-    // Sorting
+    // 11. Sorting
     const getPrice = (p: Product) => p.price ?? p.basePrice ?? 0;
     if (sortBy === 'price-asc') {
       filtered.sort((a, b) => getPrice(a) - getPrice(b));
@@ -684,8 +728,40 @@ export default function App() {
                 })}
               </div>
 
-              {/* Main Content: Full-width Product Grid */}
-              <div className="flex flex-col gap-8">
+              {/* Main Content: FilterSidebar + Product Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Desktop & Mobile Filter Sidebar Column */}
+                <div className="lg:col-span-4 xl:col-span-3 space-y-4">
+                  <FilterSidebar
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    selectedModels={selectedModels}
+                    setSelectedModels={setSelectedModels}
+                    selectedCaseTypes={selectedCaseTypes}
+                    setSelectedCaseTypes={setSelectedCaseTypes}
+                    selectedMaterials={selectedMaterials}
+                    setSelectedMaterials={setSelectedMaterials}
+                    selectedColors={selectedColors}
+                    toggleColor={toggleColor}
+                    minPrice={minPrice}
+                    setMinPrice={setMinPrice}
+                    maxPrice={maxPrice}
+                    setMaxPrice={setMaxPrice}
+                    magsafeFilter={magsafeFilter}
+                    setMagsafeFilter={setMagsafeFilter}
+                    wirelessFilter={wirelessFilter}
+                    setWirelessFilter={setWirelessFilter}
+                    inStockFilter={inStockFilter}
+                    setInStockFilter={setInStockFilter}
+                    resetAll={handleResetFilters}
+                    productsCount={getFilteredProducts().length}
+                    products={products}
+                  />
+                </div>
+
+                {/* Product Grid Column */}
+                <div className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6" id="phone-case-renderer">
                   {/* Grid header row */}
                   <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
@@ -745,7 +821,7 @@ export default function App() {
                     </div>
                   ) : (
                     <div className={gridView === 'grid'
-                      ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                      ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
                       : "flex flex-col gap-4"
                     }>
                       {getCurrentPageProducts().map((product) => (
@@ -761,7 +837,6 @@ export default function App() {
                       ))}
                     </div>
                   )}
-
 
                   {/* Pagination control */}
                   {getFilteredProducts().length > productsPerPage && (
@@ -813,6 +888,7 @@ export default function App() {
                       </div>
                     </div>
                   )}
+                </div>
               </div>
 
               {/* Bottom Features Banner */}

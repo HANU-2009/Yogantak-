@@ -9,7 +9,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.9,
     reviews_count: 164,
     image_url: 'leather',
-    models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra'],
+    models: ['iPhone 17 Pro Max', 'iPhone 17', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 13', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Samsung Galaxy A36 5G', 'Realme 14T 5G', 'Oppo A3x 5G'],
     materials: ['Premium Pebble Leather'],
     colors: [
       { id: 'terracotta', name: 'Sienna Terracotta', value: '#C05C46', bgClass: 'bg-[#C05C46]', textContrast: 'light' },
@@ -32,7 +32,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.7,
     reviews_count: 89,
     image_url: 'wheat',
-    models: ['iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Motorola Edge'],
+    models: ['iPhone 17', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 13', 'Samsung Galaxy S24+', 'Samsung Galaxy M35 5G', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Realme GT 6T', 'Motorola Edge'],
     materials: ['Bio-Degradable Wheat Fiber'],
     colors: [
       { id: 'forest', name: 'Verdant Forest', value: '#243D2D', bgClass: 'bg-[#243D2D]', textContrast: 'light' },
@@ -54,7 +54,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.6,
     reviews_count: 194,
     image_url: 'clear',
-    models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
+    models: ['iPhone 17 Pro Max', 'iPhone 17', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 13', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Samsung Galaxy A36 5G', 'Samsung Galaxy M35 5G', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Realme 14T 5G', 'Realme GT 6T', 'Realme P4X 5G', 'Oppo A3x 5G', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
     materials: ['Ultra-Tough Polycarbonate'],
     colors: [
       { id: 'glacier', name: 'Glacier Clear', value: '#DBE9EE', bgClass: 'bg-[#DBE9EE]', textContrast: 'dark' }
@@ -75,7 +75,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.8,
     reviews_count: 312,
     image_url: 'silicone',
-    models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
+    models: ['iPhone 17 Pro Max', 'iPhone 17', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 13', 'Samsung Galaxy S24 Ultra', 'Samsung Galaxy S24+', 'Samsung Galaxy A36 5G', 'Samsung Galaxy M35 5G', 'Google Pixel 8 Pro', 'Nothing Phone (2)', 'OnePlus 12', 'Realme 14T 5G', 'Realme GT 6T', 'Realme P4X 5G', 'Oppo A3x 5G', 'Samsung Galaxy Z Fold 5', 'Motorola Edge'],
     materials: ['Smooth Liquid Silicone'],
     colors: [
       { id: 'terracotta', name: 'Sienna Terracotta', value: '#C05C46', bgClass: 'bg-[#C05C46]', textContrast: 'light' },
@@ -100,7 +100,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.9,
     reviews_count: 145,
     image_url: 'carbon',
-    models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra', 'Nothing Phone (2)', 'OnePlus 12'],
+    models: ['iPhone 17 Pro Max', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra', 'Realme P4X 5G', 'Nothing Phone (2)', 'OnePlus 12'],
     materials: ['Aramid Carbon Fiber'],
     colors: [
       { id: 'charcoal', name: 'Midnight Charcoal', value: '#1A1B1C', bgClass: 'bg-[#1A1B1C]', textContrast: 'light' }
@@ -121,7 +121,7 @@ export const DEFAULT_PRODUCTS_SEED = [
     rating: 4.8,
     reviews_count: 201,
     image_url: 'wallet',
-    models: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'Samsung Galaxy S24 Ultra'],
+    models: ['iPhone 17 Pro Max', 'iPhone 17', 'iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 13', 'Samsung Galaxy S24 Ultra', 'Realme 14T 5G', 'Oppo A3x 5G'],
     materials: ['Smooth Liquid Silicone'],
     colors: [
       { id: 'charcoal', name: 'Midnight Charcoal', value: '#1A1B1C', bgClass: 'bg-[#1A1B1C]', textContrast: 'light' },

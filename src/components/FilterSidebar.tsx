@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Search, RotateCcw } from 'lucide-react';
-import { CaseMaterial, CaseColor } from '../types';
+import { Product, CaseMaterial, CaseColor } from '../types';
 import { COLORS, PHONE_MODELS, PRODUCTS } from '../data/products';
 
 interface FilterSidebarProps {
@@ -26,6 +26,7 @@ interface FilterSidebarProps {
   setInStockFilter: (val: boolean) => void;
   resetAll: () => void;
   productsCount: number;
+  products?: Product[];
 }
 
 export default function FilterSidebar({
@@ -50,8 +51,11 @@ export default function FilterSidebar({
   inStockFilter,
   setInStockFilter,
   resetAll,
-  productsCount
+  productsCount,
+  products = []
 }: FilterSidebarProps) {
+  const allProducts = products.length > 0 ? products : PRODUCTS;
+
   // Accordion states
   const [openSections, setOpenSections] = useState({
     device: true,
@@ -75,15 +79,15 @@ export default function FilterSidebar({
   const getProductCaseTypes = (product: any): string[] => {
     const types: string[] = ['All Types'];
     if (product.magsafe) types.push('MagSafe Case');
-    if (product.materials.includes('Ultra-Tough Polycarbonate')) {
+    if (Array.isArray(product.materials) && product.materials.includes('Ultra-Tough Polycarbonate')) {
       types.push('Clear Case');
       types.push('Tough Case');
     }
-    if (product.materials.includes('Aramid Carbon Fiber')) {
+    if (Array.isArray(product.materials) && product.materials.includes('Aramid Carbon Fiber')) {
       types.push('Slim Case');
       types.push('Tough Case');
     }
-    if (product.materials.includes('Smooth Liquid Silicone')) {
+    if (Array.isArray(product.materials) && product.materials.includes('Smooth Liquid Silicone')) {
       types.push('Slim Case');
     }
     if (product.id.includes('wallet') || product.name.toLowerCase().includes('wallet')) {
@@ -93,15 +97,15 @@ export default function FilterSidebar({
   };
 
   const getModelCount = (model: string) => {
-    return PRODUCTS.filter(p => p.models.includes(model as any)).length;
+    return allProducts.filter(p => Array.isArray(p.models) && p.models.includes(model as any)).length;
   };
 
   const getCaseTypeCount = (type: string) => {
-    return PRODUCTS.filter(p => getProductCaseTypes(p).includes(type)).length;
+    return allProducts.filter(p => getProductCaseTypes(p).includes(type)).length;
   };
 
   const getMaterialCount = (material: CaseMaterial) => {
-    return PRODUCTS.filter(p => p.materials.includes(material)).length;
+    return allProducts.filter(p => Array.isArray(p.materials) && p.materials.includes(material)).length;
   };
 
   const handleDeviceChange = (model: string) => {
