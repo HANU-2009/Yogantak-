@@ -961,6 +961,10 @@ export default function App() {
         cart={cart}
         onOrderConfirmed={handleOrderConfirmed}
         user={user}
+        onRequestLogin={() => {
+          setIsCheckoutOpen(false);
+          setIsAuthModalOpen(true);
+        }}
       />
 
       {/* 3. Product Details informative layout screen drawer */}

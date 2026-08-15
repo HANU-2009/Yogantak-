@@ -127,5 +127,6 @@ export interface Order {
   delayReason?: string;
   estimatedDelivery?: string;
   refund?: Refund;
+  paymentId?: string;
 }
 
