@@ -872,6 +872,7 @@ app.get('/api/orders/history', authenticateToken, async (req: AuthRequest, res) 
         status: order.status,
         delayReason: order.delayReason || null,
         estimatedDelivery: order.estimatedDelivery || null,
+        refund: order.refund || null,
         subtotal: order.subtotal,
         tax: order.tax,
         total: order.total,
@@ -916,6 +917,8 @@ app.get('/api/orders/:id', authenticateToken, async (req: AuthRequest, res) => {
 
 app.post('/api/orders/:id/cancel', authenticateToken, async (req: AuthRequest, res) => {
   const { id } = req.params;
+  const { reason } = req.body || {};
+
   try {
     if (!adminDb) return res.status(404).json({ error: 'Order not found' });
     const orderRef = adminDb.collection('orders').doc(id);
@@ -933,19 +936,43 @@ app.post('/api/orders/:id/cancel', authenticateToken, async (req: AuthRequest, r
       return res.status(400).json({ error: 'Order is already cancelled' });
     }
 
-    await orderRef.update({ status: 'cancelled' });
+    // Generate Refund Ledger Transaction
+    const refundId = `REF-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+    const refundData = {
+      id: refundId,
+      orderId: order.id,
+      userEmail: order.email,
+      amount: Number(order.total) || 0,
+      paymentId: order.paymentId || `PAY-MOCK-${Date.now()}`,
+      status: 'completed',
+      reason: reason || 'Customer requested order cancellation',
+      createdAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      refundMethod: order.paymentId ? 'Original Payment Source (Razorpay UPI / Bank)' : 'Instant Store Credit / Direct Bank Transfer'
+    };
+
+    // Save refund record to Firestore database
+    await adminDb.collection('refunds').doc(refundId).set(refundData);
+
+    // Update order status & link refund record
+    await orderRef.update({ 
+      status: 'cancelled',
+      refund: refundData,
+      cancelledAt: new Date().toISOString()
+    });
 
     // Restore stock in Postgres
     if (order.items && Array.isArray(order.items)) {
       for (const item of order.items) {
         if (item.productId?.startsWith('bespoke-')) continue;
-        await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity, item.productId]);
+        await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity || 1, item.productId]);
       }
     }
 
-    res.json({ success: true });
+    res.json({ success: true, refund: refundData });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to cancel order' });
+    console.error('[CANCEL & REFUND ERROR]', err);
+    res.status(500).json({ error: 'Failed to cancel order and process refund' });
   }
 });
 
@@ -1345,6 +1372,43 @@ app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, async (
   } catch (err) {
     console.error('[ADMIN ORDER STATUS ERROR]', err);
     res.status(500).json({ error: 'Failed to update order status' });
+  }
+});
+
+// GET /api/admin/refunds — Retrieve all refund transactions
+app.get('/api/admin/refunds', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    if (!adminDb) return res.json([]);
+    const snapshot = await adminDb.collection('refunds').orderBy('createdAt', 'desc').get();
+    const refunds = snapshot.docs.map((doc: any) => doc.data());
+    res.json(refunds);
+  } catch (err) {
+    console.error('[GET REFUNDS ERROR]', err);
+    res.status(500).json({ error: 'Failed to fetch refunds' });
+  }
+});
+
+// POST /api/admin/refunds/:id/process — Update refund status
+app.post('/api/admin/refunds/:id/process', authenticateToken, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status, refundMethod } = req.body;
+  try {
+    if (!adminDb) return res.status(404).json({ error: 'Database unavailable' });
+    const ref = adminDb.collection('refunds').doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Refund record not found' });
+    
+    const updateObj: any = { 
+      status: status || 'completed', 
+      completedAt: new Date().toISOString() 
+    };
+    if (refundMethod) updateObj.refundMethod = refundMethod;
+
+    await ref.update(updateObj);
+    res.json({ success: true, refundId: id, status: updateObj.status });
+  } catch (err) {
+    console.error('[PROCESS REFUND ERROR]', err);
+    res.status(500).json({ error: 'Failed to process refund' });
   }
 });
 

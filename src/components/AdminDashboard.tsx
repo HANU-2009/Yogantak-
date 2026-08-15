@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield, Sparkles, TrendingUp, Package, Users, Bell, CheckCircle,
   RefreshCw, Plus, Trash2, Edit3, Upload, X, Save, BarChart2,
-  ShoppingCart, Tag, AlertTriangle, IndianRupee, ChevronDown, ChevronUp
+  ShoppingCart, Tag, AlertTriangle, IndianRupee, ChevronDown, ChevronUp,
+  RotateCcw, Receipt
 } from 'lucide-react';
+import { Refund } from '../types';
 
 const API = '';
 
@@ -332,10 +334,11 @@ function ProductModal({
 // Main AdminDashboard Component
 // ──────────────────────────────────────────────
 export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'coupons'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'refunds' | 'coupons'>('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalProduct, setModalProduct] = useState<Product | null | 'new'>('new' as any);
   const [showModal, setShowModal] = useState(false);
@@ -359,11 +362,12 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [dashRes, prodRes, ordersRes, couponRes] = await Promise.all([
+      const [dashRes, prodRes, ordersRes, couponRes, refundRes] = await Promise.all([
         fetch(`${API}/api/admin/dashboard`, { headers: authHeader }),
         fetch(`${API}/api/admin/products`, { headers: authHeader }),
         fetch(`${API}/api/admin/orders`, { headers: authHeader }),
-        fetch(`${API}/api/admin/coupons`, { headers: authHeader })
+        fetch(`${API}/api/admin/coupons`, { headers: authHeader }),
+        fetch(`${API}/api/admin/refunds`, { headers: authHeader })
       ]);
 
       if (dashRes.ok) {
@@ -383,6 +387,7 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
       }
       if (ordersRes.ok) setOrders(await ordersRes.json());
       if (couponRes.ok) setCoupons(await couponRes.json());
+      if (refundRes.ok) setRefunds(await refundRes.json());
     } catch (e) {
       console.error(e);
       try {
@@ -516,6 +521,25 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
     }
   };
 
+  // ── Refund Management ──
+  const handleProcessRefund = async (refundId: string, status = 'completed') => {
+    try {
+      const resp = await fetch(`${API}/api/admin/refunds/${refundId}/process`, {
+        method: 'POST',
+        headers: authHeader,
+        body: JSON.stringify({ status })
+      });
+      if (!resp.ok) {
+        const errMsg = await getErrorMessage(resp, 'Failed to process refund');
+        throw new Error(errMsg);
+      }
+      setRefunds(prev => prev.map(r => r.id === refundId ? { ...r, status: status as any } : r));
+      showToast('✅ Refund transaction updated');
+    } catch (e: any) {
+      showToast(`❌ ${e.message}`);
+    }
+  };
+
   const handleDeleteCoupon = async (code: string) => {
     if (!confirm(`Delete coupon "${code}"?`)) return;
     try {
@@ -558,24 +582,19 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
           product={typeof modalProduct === 'object' && modalProduct !== null ? modalProduct as Product : null}
           token={token}
           onClose={() => setShowModal(false)}
-          onSaved={(p) => {
-            if (typeof modalProduct === 'object' && modalProduct !== null) {
-              setProducts(prev => prev.map(pr => pr.id === p.id ? p : pr));
-            } else {
-              setProducts(prev => [p, ...prev]);
-            }
-            onCatalogSync?.();
+          onSaved={() => {
             setShowModal(false);
-            showToast(typeof modalProduct === 'object' && modalProduct !== null ? '✅ Product updated' : '✅ Product added to catalog');
+            fetchAll();
+            onCatalogSync?.();
           }}
         />
       )}
 
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10 relative shadow-sm">
+      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-white border-b border-neutral-200 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#cfff71] border border-[#bceb5e] flex items-center justify-center shadow-sm">
-            <Shield className="w-5 h-5 text-neutral-900" />
+          <div className="p-2 bg-[#cfff71] rounded-xl text-neutral-900 shadow-sm">
+            <Shield className="w-5 h-5" />
           </div>
           <div>
             <h1 className="text-xl font-extrabold text-neutral-900 tracking-tight">Admin Dashboard</h1>
@@ -602,6 +621,7 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
           { id: 'overview', icon: BarChart2, label: 'Overview' },
           { id: 'products', icon: Package, label: 'Products & Inventory' },
           { id: 'orders', icon: ShoppingCart, label: 'Orders' },
+          { id: 'refunds', icon: RotateCcw, label: 'Refunds & Returns' },
           { id: 'coupons', icon: Tag, label: 'Coupons' }
         ].map(tab => (
           <button
@@ -943,6 +963,82 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                         )}
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── REFUNDS & RETURNS TAB ── */}
+        {activeTab === 'refunds' && (
+          <div className="space-y-6 max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-neutral-900">
+                  Refund & Cancellation Ledger
+                  <span className="ml-3 text-xs text-neutral-500 font-bold uppercase tracking-wider bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200">{refunds.length} total</span>
+                </h2>
+                <p className="text-neutral-500 text-xs font-semibold mt-0.5">Automated Razorpay gateway clearances & instant customer reimbursements</p>
+              </div>
+            </div>
+
+            {/* Refund Overview Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white border border-neutral-200 p-5 rounded-2xl shadow-sm">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block font-mono">Total Disbursed Refunds</span>
+                <p className="text-2xl font-extrabold text-neutral-900 font-mono mt-1">
+                  ₹{refunds.reduce((acc, r) => acc + (Number(r.amount) || 0), 0).toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div className="bg-white border border-neutral-200 p-5 rounded-2xl shadow-sm">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block font-mono">Completed Refund Operations</span>
+                <p className="text-2xl font-extrabold text-emerald-600 font-mono mt-1">
+                  {refunds.filter(r => r.status === 'completed').length} / {refunds.length}
+                </p>
+              </div>
+            </div>
+
+            {/* Refunds Table */}
+            {refunds.length === 0 ? (
+              <div className="text-center py-16 bg-white border border-neutral-200 rounded-2xl text-neutral-400 text-sm font-bold shadow-sm">
+                No order refund transactions recorded yet
+              </div>
+            ) : (
+              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-sm divide-y divide-neutral-100">
+                {refunds.map(refund => (
+                  <div key={refund.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-50/50 transition-colors">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-mono font-extrabold text-sm text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">{refund.id}</span>
+                        <span className="text-xs font-mono font-semibold text-neutral-500">Order: {refund.orderId}</span>
+                        <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                          refund.status === 'completed' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'
+                        }`}>
+                          ✓ {refund.status || 'COMPLETED'}
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono text-neutral-600 flex flex-wrap gap-x-4 gap-y-1">
+                        <span>User: <strong>{refund.userEmail}</strong></span>
+                        <span>Channel: <strong>{refund.refundMethod || 'Razorpay Gateway'}</strong></span>
+                        <span>Date: <strong>{new Date(refund.createdAt).toLocaleDateString()}</strong></span>
+                      </div>
+                      {refund.reason && (
+                        <p className="text-[11px] text-neutral-500 italic">Reason: "{refund.reason}"</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 border-neutral-100 pt-3 md:pt-0">
+                      <span className="text-neutral-900 font-extrabold font-mono text-lg text-right">₹{Number(refund.amount).toLocaleString('en-IN')}</span>
+                      {refund.status !== 'completed' && (
+                        <button
+                          onClick={() => handleProcessRefund(refund.id, 'completed')}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer shadow-sm"
+                        >
+                          Mark Completed
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

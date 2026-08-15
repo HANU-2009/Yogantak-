@@ -100,6 +100,19 @@ export interface PaymentDetails {
   saveInfo: boolean;
 }
 
+export interface Refund {
+  id: string;
+  orderId: string;
+  userEmail: string;
+  amount: number;
+  paymentId?: string;
+  status: 'initiated' | 'processing' | 'completed' | 'failed';
+  reason?: string;
+  createdAt: string;
+  completedAt?: string;
+  refundMethod?: string;
+}
+
 export interface Order {
   id: string;
   date: string;
@@ -113,5 +126,6 @@ export interface Order {
   status: 'confirmed' | 'processing' | 'delayed' | 'shipped' | 'delivered' | 'cancelled';
   delayReason?: string;
   estimatedDelivery?: string;
+  refund?: Refund;
 }
 
