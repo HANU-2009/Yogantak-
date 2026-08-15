@@ -80,10 +80,25 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                     <XCircle className="w-3.5 h-3.5" />
                     <span>Manifest Terminated</span>
                   </span>
+                ) : order.status === 'delayed' ? (
+                  <span className="px-3.5 py-1.5 bg-amber-600 text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 rounded-full animate-pulse">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Fulfillment Delayed</span>
+                  </span>
+                ) : order.status === 'confirmed' ? (
+                  <span className="px-3.5 py-1.5 bg-blue-700 text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 rounded-full">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Order Confirmed</span>
+                  </span>
+                ) : order.status === 'delivered' ? (
+                  <span className="px-3.5 py-1.5 bg-emerald-700 text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 rounded-full">
+                    <ClipboardCheck className="w-3.5 h-3.5" />
+                    <span>Delivered</span>
+                  </span>
                 ) : (
                   <span className="px-3.5 py-1.5 bg-[#243D2D] text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center gap-1.5 rounded-full">
                     <Truck className="w-3.5 h-3.5 animate-pulse" />
-                    <span>BlueDart / Delhivery Processing</span>
+                    <span>{order.status === 'shipped' ? 'Shipped in Transit' : 'Processing for Dispatch'}</span>
                   </span>
                 )}
               </div>
@@ -99,12 +114,16 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                       <div key={id} className="py-3 flex justify-between items-center text-xs first:pt-0 last:pb-0">
                         <div className="space-y-1">
                           <strong className="font-serif text-[#1A1B1C] font-semibold text-sm">
-                            {item.product.name} <span className="font-mono text-neutral-400">({item.quantity}x)</span>
+                            {item.product?.name || (item as any).productName || 'Phone Case'} <span className="font-mono text-neutral-400">({item.quantity}x)</span>
                           </strong>
                           <div className="font-mono text-[10px] text-[#8C8273] flex flex-wrap gap-2">
-                            <span>DEVICE: {item.selectedModel}</span>
-                            <span>•</span>
-                            <span>MATERIAL: {item.selectedMaterial}</span>
+                            <span>DEVICE: {item.selectedModel || item.customConfig?.model}</span>
+                            {item.selectedMaterial || item.customConfig?.material ? (
+                              <>
+                                <span>•</span>
+                                <span>MATERIAL: {item.selectedMaterial || item.customConfig?.material}</span>
+                              </>
+                            ) : null}
                             {item.customConfig?.monogramText && (
                               <>
                                 <span>•</span>
@@ -161,6 +180,8 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
               <div className={`px-6 py-4 text-[10.5px] font-mono border-t flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center ${
                 order.status === 'cancelled' 
                   ? 'bg-[#F9F6F0] text-[#8C8273] border-[#E2D4C0]' 
+                  : order.status === 'delayed'
+                  ? 'bg-amber-50 text-amber-900 border-amber-200'
                   : 'bg-[#EFEDE7] text-[#5C5549] border-[#EBE3D5]'
               }`}>
                 {order.status === 'cancelled' ? (
@@ -171,19 +192,21 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                     </span>
                     <span className="text-[#C05C46] font-bold tracking-wider">FULL REFUND INITIATED • 2-5 BUSINESS DAYS</span>
                   </>
-                ) : (
+                ) : order.status === 'delayed' ? (
                   <>
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#C05C46]" />
-                      <span>DISPATCH DEPOT: Mumbai Central Sorting Center</span>
-                    </span>
-                    
-                    <div className="flex flex-wrap items-center gap-4">
-                      <span className="text-[#C05C46] font-bold">ESTIMATED COMPLEMENTARY DELIVERY: 3-5 BUSINESS DAYS via BlueDart / Delhivery</span>
-                      
+                    <div className="space-y-0.5">
+                      <span className="flex items-center gap-1.5 text-amber-800 font-bold">
+                        <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>⚠️ DISPATCH DELAY NOTICE: {order.delayReason || 'Quality check inspection in progress.'}</span>
+                      </span>
+                      {order.estimatedDelivery && (
+                        <p className="text-[10px] text-amber-700 font-bold pl-5">REVISED ESTIMATED DELIVERY: {order.estimatedDelivery}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
                       {confirmingCancelId === order.id ? (
                         <div className="flex items-center gap-2 font-bold">
-                          <span className="text-[#8C8273] uppercase tracking-wider pr-1">Are you sure?</span>
+                          <span className="text-[#8C8273] uppercase tracking-wider pr-1">Cancel order?</span>
                           <button
                             onClick={() => {
                               onCancelOrder(order.id);
@@ -203,10 +226,53 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                       ) : (
                         <button
                           onClick={() => setConfirmingCancelId(order.id)}
-                          className="px-2.5 py-1 border border-[#EBE3D5] hover:border-[#C05C46] text-[#8C8273] hover:text-[#C05C46] rounded text-[9.5px] tracking-wider uppercase cursor-pointer transition-all"
+                          className="px-2.5 py-1 border border-amber-300 hover:border-amber-500 bg-white text-amber-900 font-bold rounded text-[9.5px] tracking-wider uppercase cursor-pointer transition-all"
                         >
                           Cancel Order
                         </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#C05C46]" />
+                      <span>STATUS: {order.status === 'confirmed' ? 'Order Confirmed — Preparing for laser monogramming' : order.status === 'delivered' ? 'Package Delivered' : 'DISPATCH DEPOT: Mumbai Central Sorting Center'}</span>
+                    </span>
+                    
+                    <div className="flex flex-wrap items-center gap-4">
+                      <span className="text-[#C05C46] font-bold">
+                        {order.status === 'delivered' ? 'DELIVERY COMPLETED' : 'ESTIMATED DELIVERY: 3-5 BUSINESS DAYS via BlueDart / Delhivery'}
+                      </span>
+                      
+                      {order.status !== 'delivered' && (
+                        confirmingCancelId === order.id ? (
+                          <div className="flex items-center gap-2 font-bold">
+                            <span className="text-[#8C8273] uppercase tracking-wider pr-1">Are you sure?</span>
+                            <button
+                              onClick={() => {
+                                onCancelOrder(order.id);
+                                setConfirmingCancelId(null);
+                              }}
+                              className="px-2.5 py-1 bg-[#5A2C22] hover:bg-[#723B30] text-white rounded text-[9px] cursor-pointer transition-all"
+                            >
+                              Confirm Cancel
+                            </button>
+                            <button
+                              onClick={() => setConfirmingCancelId(null)}
+                              className="px-2.5 py-1 border border-[#DCD5C9] hover:bg-[#EFEBE4] text-[#5C5549] rounded text-[9px] cursor-pointer transition-all"
+                            >
+                              Keep Order
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmingCancelId(order.id)}
+                            className="px-2.5 py-1 border border-[#EBE3D5] hover:border-[#C05C46] text-[#8C8273] hover:text-[#C05C46] rounded text-[9.5px] tracking-wider uppercase cursor-pointer transition-all"
+                          >
+                            Cancel Order
+                          </button>
+                        )
                       )}
                     </div>
                   </>

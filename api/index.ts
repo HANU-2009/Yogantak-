@@ -870,6 +870,8 @@ app.get('/api/orders/history', authenticateToken, async (req: AuthRequest, res) 
         id: order.id,
         date: new Date(order.createdAt).toLocaleDateString() + ' at ' + new Date(order.createdAt).toLocaleTimeString(),
         status: order.status,
+        delayReason: order.delayReason || null,
+        estimatedDelivery: order.estimatedDelivery || null,
         subtotal: order.subtotal,
         tax: order.tax,
         total: order.total,
@@ -1295,19 +1297,53 @@ app.get('/api/admin/orders', authenticateToken, requireAdmin, async (req, res) =
   }
 });
 
-// PUT /api/admin/orders/:id/status — Update order status
+// PUT /api/admin/orders/:id/status — Update order status (with inventory sync & delay notes)
 app.put('/api/admin/orders/:id/status', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, delayReason, estimatedDelivery } = req.body;
 
   if (!status) return res.status(400).json({ error: 'Status required' });
 
   try {
     if (adminDb) {
-      await adminDb.collection('orders').doc(id).update({ status });
+      const orderRef = adminDb.collection('orders').doc(id);
+      const doc = await orderRef.get();
+      if (!doc.exists) return res.status(404).json({ error: 'Order not found' });
+      
+      const prevOrder = doc.data();
+      const prevStatus = prevOrder?.status;
+
+      const updateData: any = { 
+        status, 
+        updatedAt: new Date().toISOString() 
+      };
+
+      if (status === 'delayed') {
+        if (delayReason !== undefined) updateData.delayReason = delayReason;
+        if (estimatedDelivery !== undefined) updateData.estimatedDelivery = estimatedDelivery;
+      }
+
+      await orderRef.update(updateData);
+
+      // Inventory Synchronization Logic:
+      // 1. If changing to 'cancelled' from another status -> restore inventory stock
+      if (status === 'cancelled' && prevStatus !== 'cancelled' && prevOrder?.items) {
+        for (const item of prevOrder.items) {
+          if (item.productId?.startsWith('bespoke-')) continue;
+          await db.query('UPDATE products SET stock = stock + $1 WHERE id = $2', [item.quantity || 1, item.productId]);
+        }
+      } 
+      // 2. If re-instating from 'cancelled' to active status -> deduct inventory stock
+      else if (prevStatus === 'cancelled' && status !== 'cancelled' && prevOrder?.items) {
+        for (const item of prevOrder.items) {
+          if (item.productId?.startsWith('bespoke-')) continue;
+          await db.query('UPDATE products SET stock = GREATEST(0, stock - $1) WHERE id = $2', [item.quantity || 1, item.productId]);
+        }
+      }
     }
-    res.json({ success: true });
+    res.json({ success: true, status, delayReason, estimatedDelivery });
   } catch (err) {
+    console.error('[ADMIN ORDER STATUS ERROR]', err);
     res.status(500).json({ error: 'Failed to update order status' });
   }
 });

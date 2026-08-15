@@ -110,6 +110,8 @@ export interface Order {
   tax: number;
   total: number;
   paymentMethod: string;
-  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'confirmed' | 'processing' | 'delayed' | 'shipped' | 'delivered' | 'cancelled';
+  delayReason?: string;
+  estimatedDelivery?: string;
 }
 

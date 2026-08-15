@@ -467,22 +467,27 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
     }
   };
 
-  // ── Order Status Update ──
-  const handleOrderStatus = async (orderId: string, status: string) => {
+  // ── Order Status Update (Supports Delay Reason & Stock Restoration) ──
+  const handleOrderStatus = async (orderId: string, status: string, delayReason?: string, estimatedDelivery?: string) => {
     try {
-      await fetch(`${API}/api/admin/orders/${orderId}/status`, {
+      const resp = await fetch(`${API}/api/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: authHeader,
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, delayReason, estimatedDelivery })
       });
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-      showToast('✅ Order status updated');
-    } catch (e) {
-      showToast('❌ Failed to update order status');
+      if (!resp.ok) {
+        const errMsg = await getErrorMessage(resp, 'Failed to update order status');
+        throw new Error(errMsg);
+      }
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as any, delayReason, estimatedDelivery } : o));
+      onCatalogSync?.();
+      showToast(status === 'cancelled' ? '🚫 Order cancelled & product stock restored' : `✅ Order status set to ${status.toUpperCase()}`);
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to update order status'}`);
     }
   };
 
-  // ── Coupon Create ──
+  // ── Coupon Management ──
   const handleCreateCoupon = async () => {
     if (!couponForm.code || !couponForm.discount_value) {
       showToast('Code and discount value required');
@@ -523,10 +528,12 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
   };
 
   const statusColor = (s: string) => {
-    if (s === 'processing') return 'text-amber-600 bg-amber-50 border-amber-200';
-    if (s === 'shipped') return 'text-blue-600 bg-blue-50 border-blue-200';
-    if (s === 'delivered') return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    if (s === 'cancelled') return 'text-red-600 bg-red-50 border-red-200';
+    if (s === 'confirmed') return 'text-sky-700 bg-sky-50 border-sky-200';
+    if (s === 'processing') return 'text-amber-700 bg-amber-50 border-amber-200';
+    if (s === 'delayed') return 'text-orange-700 bg-orange-50 border-orange-200';
+    if (s === 'shipped') return 'text-indigo-700 bg-indigo-50 border-indigo-200';
+    if (s === 'delivered') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+    if (s === 'cancelled') return 'text-red-700 bg-red-50 border-red-200';
     return 'text-neutral-500 bg-neutral-100 border-neutral-200';
   };
 
@@ -846,10 +853,10 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                         <div className="flex items-center gap-2">
                           <select
                             value={order.status}
-                            onChange={e => handleOrderStatus(order.id, e.target.value)}
+                            onChange={e => handleOrderStatus(order.id, e.target.value, (order as any).delayReason, (order as any).estimatedDelivery)}
                             className="bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-bold uppercase tracking-wider rounded-lg px-2.5 py-2 focus:outline-none focus:border-neutral-400 cursor-pointer shadow-sm"
                           >
-                            {['processing', 'shipped', 'delivered', 'cancelled'].map(s => (
+                            {['confirmed', 'processing', 'delayed', 'shipped', 'delivered', 'cancelled'].map(s => (
                               <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
@@ -864,6 +871,37 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                     </div>
                     {expandedOrder === order.id && (
                       <div className="border-t border-neutral-100 bg-neutral-50 px-5 pb-5 pt-4 space-y-4">
+                        {/* Delay Notice Management Box (Visible when status is 'delayed') */}
+                        {order.status === 'delayed' && (
+                          <div className="bg-orange-50/80 border border-orange-200 p-4 rounded-xl space-y-3">
+                            <span className="text-xs font-extrabold uppercase tracking-wider text-orange-700 block font-mono">
+                              ⚠️ Fulfillment Delay Notice Setup
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Delay Reason / Note</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Laser engraving quality check in progress"
+                                  defaultValue={(order as any).delayReason || ''}
+                                  onBlur={(e) => handleOrderStatus(order.id, 'delayed', e.target.value, (order as any).estimatedDelivery)}
+                                  className="w-full bg-white border border-neutral-200 text-xs font-medium p-2 rounded-lg text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Estimated Delivery Date</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Aug 20, 2026"
+                                  defaultValue={(order as any).estimatedDelivery || ''}
+                                  onBlur={(e) => handleOrderStatus(order.id, 'delayed', (order as any).delayReason, e.target.value)}
+                                  className="w-full bg-white border border-neutral-200 text-xs font-medium p-2 rounded-lg text-neutral-900 focus:outline-none focus:border-neutral-400"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Delivery Destination Address Dossier */}
                         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm space-y-1">
                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block font-mono">
