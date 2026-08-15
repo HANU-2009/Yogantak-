@@ -862,15 +862,47 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                         </div>
                       </div>
                     </div>
-                    {expandedOrder === order.id && order.items?.length > 0 && (
-                      <div className="border-t border-neutral-100 bg-neutral-50 px-5 pb-5 pt-4 space-y-3">
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-2">Order Items</h4>
-                        {order.items.map((item: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between text-sm bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
-                            <span className="font-bold text-neutral-700">{item.product_name || item.product?.name || 'Product'} <span className="text-neutral-400 ml-2 text-xs">×{item.quantity}</span></span>
-                            <span className="font-mono font-extrabold text-neutral-900">₹{Number(item.price).toLocaleString('en-IN')}</span>
+                    {expandedOrder === order.id && (
+                      <div className="border-t border-neutral-100 bg-neutral-50 px-5 pb-5 pt-4 space-y-4">
+                        {/* Delivery Destination Address Dossier */}
+                        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm space-y-1">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 block font-mono">
+                            📦 Delivery Destination Coordinates
+                          </span>
+                          <p className="text-xs font-mono text-neutral-800 leading-relaxed font-semibold">
+                            Recipient: <span className="font-extrabold text-neutral-900">{order.shippingName || (order as any).shipping?.fullName || order.email}</span><br />
+                            Address: {(order as any).shippingAddress || (order as any).shipping?.addressLine1 || 'N/A'}<br />
+                            City/State/Zip: {(order as any).shippingCity || (order as any).shipping?.city || ''} {(order as any).shippingState || (order as any).shipping?.state || ''} {(order as any).shippingZip || (order as any).shipping?.postalCode || ''}<br />
+                            Country: {(order as any).shippingCountry || (order as any).shipping?.country || 'India'}<br />
+                            {(order as any).shippingPhone || (order as any).shipping?.phone ? `Contact Phone: ${(order as any).shippingPhone || (order as any).shipping?.phone}` : ''}
+                          </p>
+                        </div>
+
+                        {/* Order Items List */}
+                        {order.items?.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Order Items Manifest</h4>
+                            {order.items.map((item: any, idx: number) => (
+                              <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-sm bg-white p-3 rounded-xl border border-neutral-200 shadow-sm gap-2">
+                                <div>
+                                  <span className="font-bold text-neutral-800">
+                                    {item.productName || item.product_name || item.product?.name || 'Phone Case'}
+                                    <span className="text-neutral-500 ml-2 text-xs font-mono">×{item.quantity}</span>
+                                  </span>
+                                  <div className="text-[11px] font-mono text-neutral-500 mt-0.5 flex flex-wrap gap-2">
+                                    {item.selectedModel || item.customConfig?.model ? (
+                                      <span>Model: <strong className="text-neutral-700">{item.selectedModel || item.customConfig?.model}</strong></span>
+                                    ) : null}
+                                    {item.selectedMaterial || item.customConfig?.material ? (
+                                      <span>• Material: <strong className="text-neutral-700">{item.selectedMaterial || item.customConfig?.material}</strong></span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <span className="font-mono font-extrabold text-neutral-900 shrink-0">₹{Number(item.price || item.product?.price || 0).toLocaleString('en-IN')}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>
