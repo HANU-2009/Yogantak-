@@ -1010,12 +1010,29 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                   <div key={refund.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-neutral-50/50 transition-colors">
                     <div className="space-y-1.5 flex-1">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-mono font-extrabold text-sm text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">{refund.id}</span>
+                        <span className="font-mono font-extrabold text-sm text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200">
+                          {refund.razorpayRefundId || refund.id}
+                        </span>
                         <span className="text-xs font-mono font-semibold text-neutral-500">Order: {refund.orderId}</span>
+                        {refund.paymentId && (
+                          <span className="text-xs font-mono text-neutral-400">Pay: {refund.paymentId}</span>
+                        )}
                         <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
-                          refund.status === 'completed' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'
+                          refund.status === 'REFUNDED' || refund.status === 'completed' || refund.status === 'processed'
+                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            : refund.status === 'REFUND_PENDING' || refund.status === 'pending'
+                            ? 'text-amber-700 bg-amber-50 border-amber-200'
+                            : refund.status === 'REFUND_FAILED' || refund.status === 'failed'
+                            ? 'text-rose-700 bg-rose-50 border-rose-200'
+                            : 'text-blue-700 bg-blue-50 border-blue-200'
                         }`}>
-                          ✓ {refund.status || 'COMPLETED'}
+                          {refund.status === 'REFUNDED' || refund.status === 'completed' || refund.status === 'processed'
+                            ? '✓ REFUNDED'
+                            : refund.status === 'REFUND_PENDING' || refund.status === 'pending'
+                            ? '⏳ PENDING'
+                            : refund.status === 'REFUND_FAILED' || refund.status === 'failed'
+                            ? '❌ FAILED'
+                            : 'ℹ️ INITIATED'}
                         </span>
                       </div>
                       <div className="text-xs font-mono text-neutral-600 flex flex-wrap gap-x-4 gap-y-1">
@@ -1026,13 +1043,16 @@ export default function AdminDashboard({ token, onClose, onCatalogSync }: AdminD
                       {refund.reason && (
                         <p className="text-[11px] text-neutral-500 italic">Reason: "{refund.reason}"</p>
                       )}
+                      {refund.gatewayError && (
+                        <p className="text-[11px] text-rose-600 font-semibold">⚠️ Gateway Error: {refund.gatewayError}</p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-4 shrink-0 justify-between md:justify-end border-t md:border-t-0 border-neutral-100 pt-3 md:pt-0">
                       <span className="text-neutral-900 font-extrabold font-mono text-lg text-right">₹{Number(refund.amount).toLocaleString('en-IN')}</span>
-                      {refund.status !== 'completed' && (
+                      {(refund.status !== 'completed' && refund.status !== 'REFUNDED' && refund.status !== 'processed') && (
                         <button
-                          onClick={() => handleProcessRefund(refund.id, 'completed')}
+                          onClick={() => handleProcessRefund(refund.id, 'REFUNDED')}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer shadow-sm"
                         >
                           Mark Completed

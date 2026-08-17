@@ -189,22 +189,54 @@ export default function OrdersList({ orders, onCancelOrder }: OrdersListProps) {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                       <span className="flex items-center gap-1.5 text-[#5A2C22] font-bold">
                         <Receipt className="w-4 h-4 text-[#C05C46] shrink-0" />
-                        <span>ORDER CANCELLED — REFUND PROCESSED TO PAYMENT METHOD</span>
+                        <span>
+                          {order.refund?.status === 'REFUNDED' || order.refund?.status === 'completed' || order.refund?.status === 'processed'
+                            ? 'ORDER CANCELLED — REFUND PROCESSED TO SOURCE'
+                            : order.refund?.status === 'REFUND_PENDING' || order.refund?.status === 'pending'
+                            ? 'ORDER CANCELLED — REFUND PENDING BANK CLEARANCE'
+                            : order.refund?.status === 'REFUND_FAILED'
+                            ? 'ORDER CANCELLED — GATEWAY REFUND ACTION REQUIRED'
+                            : 'ORDER CANCELLED — REFUND INITIATED'}
+                        </span>
                       </span>
                       <span className="text-[#C05C46] font-extrabold font-mono text-xs tracking-wider bg-[#F5ECE2] px-2.5 py-1 rounded-md border border-[#E2D4C0]">
-                        REFUNDED AMOUNT: ₹{order.total.toLocaleString('en-IN')}
+                        REFUND AMOUNT: ₹{order.total.toLocaleString('en-IN')}
                       </span>
                     </div>
                     
                     <div className="bg-white p-3.5 rounded-lg border border-[#E2D4C0] font-mono text-[10.5px] space-y-1.5 text-[#5C5549] shadow-inner-sm">
                       <div className="flex flex-wrap justify-between gap-2 border-b border-dashed border-[#EBE3D5] pb-1.5">
-                        <span>REFUND TRANSACTION ID: <strong className="text-neutral-900">{order.refund?.id || `REF-${order.id.slice(-8)}`}</strong></span>
-                        <span>CLEARANCE STATUS: <strong className="text-emerald-700 font-extrabold uppercase">✓ {order.refund?.status || 'COMPLETED'}</strong></span>
+                        <span>REFUND TRANSACTION ID: <strong className="text-neutral-900">{order.refund?.razorpayRefundId || order.refund?.id || `REF-${order.id.slice(-8)}`}</strong></span>
+                        <span>
+                          CLEARANCE STATUS: {' '}
+                          <strong className={`font-extrabold uppercase px-2 py-0.5 rounded ${
+                            order.refund?.status === 'REFUNDED' || order.refund?.status === 'completed' || order.refund?.status === 'processed'
+                              ? 'text-emerald-700 bg-emerald-50'
+                              : order.refund?.status === 'REFUND_PENDING' || order.refund?.status === 'pending'
+                              ? 'text-amber-700 bg-amber-50'
+                              : order.refund?.status === 'REFUND_FAILED'
+                              ? 'text-rose-700 bg-rose-50'
+                              : 'text-blue-700 bg-blue-50'
+                          }`}>
+                            {order.refund?.status === 'REFUNDED' || order.refund?.status === 'completed' || order.refund?.status === 'processed'
+                              ? '✓ REFUNDED'
+                              : order.refund?.status === 'REFUND_PENDING' || order.refund?.status === 'pending'
+                              ? '⏳ REFUND PENDING'
+                              : order.refund?.status === 'REFUND_FAILED'
+                              ? '❌ REFUND FAILED'
+                              : 'ℹ️ INITIATED'}
+                          </strong>
+                        </span>
                       </div>
                       <div className="flex flex-wrap justify-between gap-2 pt-0.5">
                         <span>DISBURSEMENT CHANNEL: <strong className="text-neutral-800">{order.refund?.refundMethod || 'Razorpay / Original Payment Source'}</strong></span>
-                        <span>TIMESTAMPS: <strong>{order.refund?.completedAt ? new Date(order.refund.completedAt).toLocaleString('en-IN') : 'Instant Clearance'}</strong></span>
+                        <span>TIMESTAMPS: <strong>{order.refund?.completedAt ? new Date(order.refund.completedAt).toLocaleString('en-IN') : 'Gateway Processing'}</strong></span>
                       </div>
+                      {order.refund?.gatewayError && (
+                        <div className="pt-1 text-[10px] text-rose-600 font-sans font-semibold">
+                          ⚠️ Gateway Notice: {order.refund.gatewayError}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : order.status === 'delayed' ? (

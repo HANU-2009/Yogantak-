@@ -106,8 +106,11 @@ export interface Refund {
   userEmail: string;
   amount: number;
   paymentId?: string;
-  status: 'initiated' | 'processing' | 'completed' | 'failed';
+  razorpayRefundId?: string;
+  status: 'initiated' | 'processing' | 'completed' | 'failed' | 'REFUNDED' | 'REFUND_PENDING' | 'REFUND_REQUESTED' | 'REFUND_FAILED' | 'processed' | 'pending';
   reason?: string;
+  gatewayError?: string | null;
+  idempotencyKey?: string;
   createdAt: string;
   completedAt?: string;
   refundMethod?: string;

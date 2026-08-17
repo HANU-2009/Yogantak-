@@ -202,21 +202,24 @@ export default function CheckoutModal({
 
       setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Requesting order reference token from backend...']);
       
-      // 1. Create Razorpay order on our backend
+      // 1. Create Razorpay order on our backend with authoritative server calculation
       const orderRes = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: amountPaise,
           currency: 'INR',
-          receipt: `rcpt_yogantak_${Date.now().toString().slice(-6)}`
+          receipt: `rcpt_yogantak_${Date.now().toString().slice(-6)}`,
+          items: cart,
+          couponCode: appliedCoupon ? appliedCoupon.code : null
         })
       });
 
       const orderData = await orderRes.json();
 
       if (!orderRes.ok) {
-        throw new Error(orderData.error || 'Payment gateway unavailable. Please try again or contact support.');
+        const errorMsg = typeof orderData.error === 'object' ? orderData.error?.message : orderData.error;
+        throw new Error(errorMsg || 'Payment gateway unavailable. Please try again or contact support.');
       }
 
       // Map order_id to id for compatibility
@@ -247,7 +250,8 @@ export default function CheckoutModal({
 
         const verifyData = await verifyRes.json();
         if (!verifyRes.ok || !verifyData.verified) {
-          throw new Error(verifyData.error || 'Cryptographic verification failed');
+          const errMsg = typeof verifyData.error === 'object' ? verifyData.error?.message : verifyData.error;
+          throw new Error(errMsg || 'Cryptographic verification failed');
         }
 
         setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Signature verified. Hashing order manifest in database...']);
@@ -268,6 +272,7 @@ export default function CheckoutModal({
             shippingState: shipping.state,
             shippingZip: shipping.postalCode,
             shippingCountry: shipping.country,
+            shippingPhone: shipping.phone,
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             paymentId: mockPaymentId
           })
@@ -275,7 +280,8 @@ export default function CheckoutModal({
 
         const orderFinalData = await orderFinalRes.json();
         if (!orderFinalRes.ok) {
-          throw new Error(orderFinalData.error || 'Failed to place order in database');
+          const errMsg = typeof orderFinalData.error === 'object' ? orderFinalData.error?.message : orderFinalData.error;
+          throw new Error(errMsg || 'Failed to place order in database');
         }
 
         const newOrder: Order = {
@@ -338,7 +344,8 @@ export default function CheckoutModal({
 
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.verified) {
-              throw new Error(verifyData.error || 'Cryptographic verification failed');
+              const errMsg = typeof verifyData.error === 'object' ? verifyData.error?.message : verifyData.error;
+              throw new Error(errMsg || 'Cryptographic verification failed');
             }
 
             setAuthLogs(prev => [...prev, '[SECURE-PORTAL] - Signature verified. Hashing order manifest in database...']);
@@ -360,6 +367,7 @@ export default function CheckoutModal({
                 shippingState: shipping.state,
                 shippingZip: shipping.postalCode,
                 shippingCountry: shipping.country,
+                shippingPhone: shipping.phone,
                 couponCode: appliedCoupon ? appliedCoupon.code : null,
                 paymentId: response.razorpay_payment_id
               })
@@ -367,7 +375,8 @@ export default function CheckoutModal({
 
             const orderFinalData = await orderFinalRes.json();
             if (!orderFinalRes.ok) {
-              throw new Error(orderFinalData.error || 'Failed to place order in database');
+              const errMsg = typeof orderFinalData.error === 'object' ? orderFinalData.error?.message : orderFinalData.error;
+              throw new Error(errMsg || 'Failed to place order in database');
             }
 
             const newOrder: Order = {

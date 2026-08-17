@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, BookOpen, Clock, Heart, Sparkles, User, Search, Shield, Menu, X, ChevronRight, Phone, Info, FileText, RefreshCw, Truck } from 'lucide-react';
+import { ShoppingBag, BookOpen, Clock, Sparkles, User, Search, Shield, Menu, X, ChevronRight, Phone, Info, FileText, RefreshCw, Truck } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface NavbarProps {
@@ -140,16 +140,6 @@ export default function Navbar({
               aria-label="Toggle search bar"
             >
               <Search className="w-4 h-4" />
-            </button>
-
-            {/* Wishlist */}
-            <button 
-              onClick={() => handleNavClick('catalog')}
-              className="hidden sm:flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-100/80 backdrop-blur-sm text-neutral-700 hover:bg-neutral-200 transition-all cursor-pointer relative"
-              title="Saved Items"
-            >
-              <Heart className="w-4 h-4" />
-              {savedCount > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
             </button>
 
             {/* Cart */}

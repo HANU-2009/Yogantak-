@@ -604,8 +604,27 @@ export default function App() {
     }, 1000);
   };
 
-  const handleCancelOrder = (orderId: string) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ reason: 'Customer requested order cancellation' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', refund: data.refund || o.refund } : o));
+      } else {
+        const errorMsg = data.error?.message || data.error || 'Unable to cancel order.';
+        alert(errorMsg);
+      }
+    } catch (err: any) {
+      console.error('Failed to cancel order:', err);
+      alert('Network error while processing cancellation. Please try again.');
+    }
   };
 
   // Quick navigation routing modifiers
