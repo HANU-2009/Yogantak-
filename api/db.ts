@@ -31,6 +31,7 @@ const inMemoryCoupons: Map<string, any> = new Map();
 const inMemoryOrdersDb: Map<string, any> = new Map();
 const inMemoryOrderItemsDb: Map<string, any> = new Map();
 const inMemoryRefundsDb: Map<string, any> = new Map();
+const inMemoryWebhookEventsDb: Map<string, any> = new Map();
 
 // Configure Neon Pool with strict timeout (3.5s) to avoid Vercel 10s serverless invocation timeouts
 let neonPool: Pool | null = null;
